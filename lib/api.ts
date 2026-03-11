@@ -1,0 +1,60 @@
+import { Sortie, SortiesQueryResult, SortieInput } from './types';
+
+export type SortiesFilters = {
+  search: string;
+  immatriculation: string;
+  dateFrom: string;
+  dateTo: string;
+  limit: number;
+  offset: number;
+};
+
+async function request<T>(input: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(input, {
+    ...init,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(init?.headers || {}),
+    },
+  });
+
+  const data = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(data?.message || 'Erreur réseau');
+  }
+
+  return data as T;
+}
+
+export function buildQuery(filters: Partial<SortiesFilters>) {
+  const params = new URLSearchParams();
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value === '' || value == null) return;
+    params.set(key, String(value));
+  });
+  return params.toString();
+}
+
+export async function fetchSorties(filters: SortiesFilters) {
+  const query = buildQuery(filters);
+  return request<SortiesQueryResult>(`/api/sorties?${query}`);
+}
+
+export async function createSortie(input: SortieInput) {
+  return request<Sortie>('/api/sorties', { method: 'POST', body: JSON.stringify(input) });
+}
+
+export async function updateSortie(id: number, input: SortieInput) {
+  return request<Sortie>(`/api/sorties/${id}`, { method: 'PUT', body: JSON.stringify(input) });
+}
+
+export async function deleteSortie(id: number) {
+  return request<{ success: true; id: number }>(`/api/sorties/${id}`, { method: 'DELETE' });
+}
+
+export async function importSorties(rows: SortieInput[]) {
+  return request<{ inserted: number; skipped: number; errors: Array<{ row: number; message: string }> }>('/api/sorties/import', {
+    method: 'POST',
+    body: JSON.stringify({ rows }),
+  });
+}

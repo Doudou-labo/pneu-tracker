@@ -1,25 +1,82 @@
 import { NextResponse } from 'next/server';
 import db from '@/lib/db';
+import { errorResponse, validateSortieInput } from '@/lib/validators';
 
-export async function GET() {
-  const sorties = db.prepare('SELECT * FROM sorties ORDER BY date DESC, created_at DESC').all();
-  return NextResponse.json(sorties);
+export async function GET(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const search = (searchParams.get('search') || '').trim();
+    const immatriculation = (searchParams.get('immatriculation') || '').trim().toUpperCase();
+    const dateFrom = (searchParams.get('dateFrom') || '').trim();
+    const dateTo = (searchParams.get('dateTo') || '').trim();
+    const limit = Math.min(Math.max(Number(searchParams.get('limit') || 50), 1), 200);
+    const offset = Math.max(Number(searchParams.get('offset') || 0), 0);
+
+    const conditions = ['deleted_at IS NULL'];
+    const params: unknown[] = [];
+
+    if (search) {
+      conditions.push('(immatriculation LIKE ? OR COALESCE(code_sap,\'\') LIKE ? OR COALESCE(description,\'\') LIKE ?)');
+      const like = `%${search}%`;
+      params.push(like, like, like);
+    }
+
+    if (immatriculation) {
+      conditions.push('immatriculation = ?');
+      params.push(immatriculation);
+    }
+
+    if (dateFrom) {
+      conditions.push('date >= ?');
+      params.push(dateFrom);
+    }
+
+    if (dateTo) {
+      conditions.push('date <= ?');
+      params.push(dateTo);
+    }
+
+    const where = `WHERE ${conditions.join(' AND ')}`;
+    const totalRow = db.prepare(`SELECT COUNT(*) as count FROM sorties ${where}`).get(...params) as { count: number };
+    const total = Number(totalRow?.count ?? 0);
+    const items = db
+      .prepare(`SELECT * FROM sorties ${where} ORDER BY date DESC, created_at DESC LIMIT ? OFFSET ?`)
+      .all(...params, limit, offset);
+
+    return NextResponse.json({ items, total, limit, offset });
+  } catch (error) {
+    return errorResponse(error);
+  }
 }
 
 export async function POST(request: Request) {
-  const body = await request.json();
-  const { date, immatriculation, code_sap, quantite, description } = body;
+  try {
+    const body = await request.json();
+    const input = validateSortieInput(body);
 
-  if (!date || !immatriculation || !quantite) {
-    return NextResponse.json({ error: 'Champs obligatoires manquants' }, { status: 400 });
+    const duplicate = db.prepare(`
+      SELECT id FROM sorties
+      WHERE deleted_at IS NULL
+        AND date = ?
+        AND immatriculation = ?
+        AND COALESCE(code_sap, '') = COALESCE(?, '')
+        AND quantite = ?
+        AND COALESCE(description, '') = COALESCE(?, '')
+      LIMIT 1
+    `).get(input.date, input.immatriculation, input.code_sap, input.quantite, input.description);
+
+    if (duplicate) {
+      return NextResponse.json({ code: 'DUPLICATE', message: 'Une sortie identique existe déjà.' }, { status: 409 });
+    }
+
+    const result = db.prepare(`
+      INSERT INTO sorties (date, immatriculation, code_sap, quantite, description, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+    `).run(input.date, input.immatriculation, input.code_sap ?? null, input.quantite, input.description ?? null);
+
+    const newSortie = db.prepare('SELECT * FROM sorties WHERE id = ?').get(result.lastInsertRowid);
+    return NextResponse.json(newSortie, { status: 201 });
+  } catch (error) {
+    return errorResponse(error);
   }
-
-  const stmt = db.prepare(`
-    INSERT INTO sorties (date, immatriculation, code_sap, quantite, description)
-    VALUES (?, ?, ?, ?, ?)
-  `);
-  const result = stmt.run(date, immatriculation.toUpperCase(), code_sap || null, quantite, description || null);
-  
-  const newSortie = db.prepare('SELECT * FROM sorties WHERE id = ?').get(result.lastInsertRowid);
-  return NextResponse.json(newSortie, { status: 201 });
 }
