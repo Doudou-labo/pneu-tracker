@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { HeaderStats } from '@/components/header-stats';
 import { Tabs } from '@/components/tabs';
 import { SortieForm } from '@/components/sortie-form';
@@ -9,11 +9,14 @@ import { SortiesList } from '@/components/sorties-list';
 import { DashboardCharts } from '@/components/dashboard-charts';
 import { EditSortieDialog } from '@/components/edit-sortie-dialog';
 import { DeleteDialog } from '@/components/delete-dialog';
+import { PaginationControls } from '@/components/pagination-controls';
+import { AuditLogPanel } from '@/components/audit-log-panel';
 import { ToastViewport } from '@/components/toast-viewport';
 import { useSorties } from '@/hooks/use-sorties';
 import { buildCsv, parseCsvLine } from '@/lib/csv';
+import { fetchAuditLogs } from '@/lib/api';
 import { formatDateFr, formatDateTimeFr } from '@/lib/formatters';
-import { Sortie, SortieInput } from '@/lib/types';
+import { AuditLog, Sortie, SortieInput } from '@/lib/types';
 import { normalizeImmatriculation } from '@/lib/validators';
 
 type Tab = 'form' | 'history' | 'dashboard';
@@ -57,6 +60,7 @@ export default function Home() {
   const [editing, setEditing] = useState<Sortie | null>(null);
   const [deletingSortie, setDeletingSortie] = useState<Sortie | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const {
@@ -75,6 +79,12 @@ export default function Home() {
     remove,
     bulkImport,
     resetFilters,
+    hasPrev,
+    hasNext,
+    pageStart,
+    pageEnd,
+    nextPage,
+    prevPage,
   } = useSorties();
 
   const addToast = (type: Toast['type'], text: string) => {
@@ -82,6 +92,19 @@ export default function Home() {
     setToasts((current) => [...current, { id, type, text }]);
     setTimeout(() => setToasts((current) => current.filter((toast) => toast.id !== id)), 4000);
   };
+
+  const refreshAudit = async () => {
+    try {
+      const data = await fetchAuditLogs(12);
+      setAuditLogs(data.items);
+    } catch {
+      // audit non bloquant pour l'UI
+    }
+  };
+
+  useEffect(() => {
+    void refreshAudit();
+  }, []);
 
   const totalPneus = useMemo(() => items.reduce((acc, item) => acc + item.quantite, 0), [items]);
   const thisMonth = new Date().toISOString().slice(0, 7);
@@ -128,6 +151,7 @@ export default function Home() {
     try {
       const created = await create(toPayload(form));
       setForm(defaultForm());
+      void refreshAudit();
       addToast('success', `✅ Sortie enregistrée : ${created.immatriculation} · ${created.quantite} pneus`);
     } catch (error) {
       setFormErrors({ global: error instanceof Error ? error.message : 'Erreur lors de l’enregistrement' });
@@ -156,6 +180,7 @@ export default function Home() {
     try {
       const updated = await update(editing.id, toPayload(editForm));
       setEditing(null);
+      void refreshAudit();
       addToast('success', `✏️ Sortie modifiée : ${updated.immatriculation}`);
     } catch (error) {
       addToast('error', error instanceof Error ? error.message : 'Erreur lors de la modification');
@@ -166,6 +191,7 @@ export default function Home() {
     if (!deletingSortie) return;
     try {
       await remove(deletingSortie.id);
+      void refreshAudit();
       addToast('success', `🗑️ Sortie supprimée : ${deletingSortie.immatriculation}`);
       setDeletingSortie(null);
     } catch (error) {
@@ -185,6 +211,11 @@ export default function Home() {
     a.download = `sorties-pneus-${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
     URL.revokeObjectURL(url);
+    void fetch('/api/audit/export', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ total, offset: filters.offset, limit: filters.limit, search: filters.search }),
+    }).then(() => refreshAudit()).catch(() => undefined);
     addToast('info', '📤 Export CSV généré (compatible Excel)');
   };
 
@@ -225,6 +256,7 @@ export default function Home() {
         }
 
         const result = await bulkImport(rows);
+        void refreshAudit();
         addToast('success', `📥 Import terminé : ${result.inserted} ajoutée(s), ${result.skipped} ignorée(s)`);
         if (result.errors.length) {
           addToast('info', `ℹ️ ${result.errors.slice(0, 3).map((item) => `L${item.row}: ${item.message}`).join(' · ')}`);
@@ -282,7 +314,7 @@ export default function Home() {
               />
 
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-sm text-gray-500">Recherche + filtres côté serveur, historique paginé prêt.</span>
+                <span className="text-sm text-gray-500">Recherche + filtres côté serveur, pagination 20 par page, audit trail actif.</span>
                 <div className="flex flex-wrap gap-2">
                   <label className="cursor-pointer rounded-lg border border-indigo-300 bg-indigo-50 px-3 py-1.5 text-sm font-medium text-indigo-700 transition-colors hover:bg-indigo-100">
                     {importing ? 'Import…' : '📥 Import CSV'}
@@ -295,6 +327,8 @@ export default function Home() {
           </div>
 
           <SortiesList items={items} total={total} loading={loading} onEdit={openEdit} onDelete={setDeletingSortie} />
+          <PaginationControls pageStart={pageStart} pageEnd={pageEnd} total={total} hasPrev={hasPrev} hasNext={hasNext} onPrev={prevPage} onNext={nextPage} />
+          <AuditLogPanel logs={auditLogs} />
         </div>
       ) : null}
 

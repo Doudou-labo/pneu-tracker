@@ -44,4 +44,16 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_sorties_deleted_at ON sorties(deleted_at);
 `);
 
+db.exec(`
+  CREATE TABLE IF NOT EXISTS audit_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    actor TEXT NOT NULL,
+    action TEXT NOT NULL,
+    entity_type TEXT NOT NULL,
+    entity_id INTEGER,
+    details_json TEXT
+  )
+`);
+
 export default db;

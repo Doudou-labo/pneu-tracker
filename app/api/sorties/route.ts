@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import db from '@/lib/db';
+import { getActor, logAudit } from '@/lib/audit';
 import { errorResponse, validateSortieInput } from '@/lib/validators';
 
 export async function GET(request: Request) {
@@ -75,6 +76,13 @@ export async function POST(request: Request) {
     `).run(input.date, input.immatriculation, input.code_sap ?? null, input.quantite, input.description ?? null);
 
     const newSortie = db.prepare('SELECT * FROM sorties WHERE id = ?').get(result.lastInsertRowid);
+    logAudit({
+      actor: getActor(request),
+      action: 'create',
+      entityType: 'sortie',
+      entityId: Number(result.lastInsertRowid),
+      details: { immatriculation: input.immatriculation, quantite: input.quantite, date: input.date },
+    });
     return NextResponse.json(newSortie, { status: 201 });
   } catch (error) {
     return errorResponse(error);

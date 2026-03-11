@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import db from '@/lib/db';
+import { getActor, logAudit } from '@/lib/audit';
 import { errorResponse, validateId, validateSortieInput } from '@/lib/validators';
 
 export async function DELETE(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -20,6 +21,7 @@ export async function DELETE(
       return NextResponse.json({ code: 'NOT_FOUND', message: 'Sortie non trouvée' }, { status: 404 });
     }
 
+    logAudit({ actor: getActor(request), action: 'delete', entityType: 'sortie', entityId: id, details: { deleted_at: new Date().toISOString() } });
     return NextResponse.json({ success: true, id });
   } catch (error) {
     return errorResponse(error);
@@ -47,6 +49,7 @@ export async function PUT(
     }
 
     const updated = db.prepare('SELECT * FROM sorties WHERE id = ?').get(id);
+    logAudit({ actor: getActor(request), action: 'update', entityType: 'sortie', entityId: id, details: { immatriculation: input.immatriculation, quantite: input.quantite, date: input.date } });
     return NextResponse.json(updated);
   } catch (error) {
     return errorResponse(error);

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import db from '@/lib/db';
+import { getActor, logAudit } from '@/lib/audit';
 import { errorResponse, validateBulkRows } from '@/lib/validators';
 
 export async function POST(request: Request) {
@@ -43,6 +44,7 @@ export async function POST(request: Request) {
 
     tx();
 
+    logAudit({ actor: getActor(request), action: 'import_csv', entityType: 'sortie', details: { inserted, skipped, errorsCount: errors.length } });
     return NextResponse.json({ inserted, skipped, errors });
   } catch (error) {
     return errorResponse(error);

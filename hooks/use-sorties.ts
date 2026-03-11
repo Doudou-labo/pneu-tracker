@@ -9,7 +9,7 @@ const defaultFilters: SortiesFilters = {
   immatriculation: '',
   dateFrom: '',
   dateTo: '',
-  limit: 50,
+  limit: 20,
   offset: 0,
 };
 
@@ -89,6 +89,21 @@ export function useSorties() {
     }
   }, [filters, load]);
 
+  const hasPrev = filters.offset > 0;
+  const hasNext = filters.offset + filters.limit < total;
+  const pageStart = total === 0 ? 0 : filters.offset + 1;
+  const pageEnd = total === 0 ? 0 : Math.min(filters.offset + items.length, total);
+
+  const nextPage = () => {
+    if (!hasNext) return;
+    setFilters((current) => ({ ...current, offset: current.offset + current.limit }));
+  };
+
+  const prevPage = () => {
+    if (!hasPrev) return;
+    setFilters((current) => ({ ...current, offset: Math.max(current.offset - current.limit, 0) }));
+  };
+
   return {
     items,
     total,
@@ -100,6 +115,12 @@ export function useSorties() {
     setFilters,
     uniqueImmats,
     lastSaved,
+    hasPrev,
+    hasNext,
+    pageStart,
+    pageEnd,
+    nextPage,
+    prevPage,
     load,
     create,
     update,

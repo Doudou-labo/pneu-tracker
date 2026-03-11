@@ -40,6 +40,10 @@ export async function fetchSorties(filters: SortiesFilters) {
   return request<SortiesQueryResult>(`/api/sorties?${query}`);
 }
 
+export async function fetchAuditLogs(limit = 20) {
+  return request<{ items: Array<{ id: number; created_at: string; actor: string; action: string; entity_type: string; entity_id: number | null; details_json: string | null }> }>(`/api/audit?limit=${limit}`);
+}
+
 export async function createSortie(input: SortieInput) {
   return request<Sortie>('/api/sorties', { method: 'POST', body: JSON.stringify(input) });
 }

@@ -17,6 +17,16 @@ export interface SortiesQueryResult {
   offset: number;
 }
 
+export interface AuditLog {
+  id: number;
+  created_at: string;
+  actor: string;
+  action: string;
+  entity_type: string;
+  entity_id: number | null;
+  details_json: string | null;
+}
+
 export type SortieInput = {
   date: string;
   immatriculation: string;
