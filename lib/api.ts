@@ -1,4 +1,4 @@
-import { Sortie, SortiesQueryResult, SortieInput } from './types';
+import { Sortie, SortiesQueryResult, SortieInput, TyreCatalogItem } from './types';
 
 export type SortiesFilters = {
   search: string;
@@ -42,6 +42,10 @@ export async function fetchSorties(filters: SortiesFilters) {
 
 export async function fetchAuditLogs(limit = 20) {
   return request<{ items: Array<{ id: number; created_at: string; actor: string; action: string; entity_type: string; entity_id: number | null; details_json: string | null }> }>(`/api/audit?limit=${limit}`);
+}
+
+export async function fetchTyreSuggestions(q: string, limit = 8) {
+  return request<{ items: TyreCatalogItem[] }>(`/api/tyres/suggest?q=${encodeURIComponent(q)}&limit=${limit}`);
 }
 
 export async function createSortie(input: SortieInput) {

@@ -3,6 +3,7 @@ import { SortieInput } from './types';
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const SAP_RE = /^[A-Za-z0-9\-_/ ]{0,32}$/;
 const IMMAT_ALLOWED_RE = /^[A-Z0-9 -]{2,15}$/;
+const TEXT_RE = /^[^<>]{0,240}$/;
 
 export class ValidationError extends Error {
   status = 422;
@@ -25,6 +26,9 @@ export function normalizeOptionalText(value: unknown, maxLength: number) {
   if (!normalized) return null;
   if (normalized.length > maxLength) {
     throw new ValidationError(`Le texte dépasse ${maxLength} caractères`);
+  }
+  if (!TEXT_RE.test(normalized)) {
+    throw new ValidationError('Le texte contient des caractères non autorisés');
   }
   return normalized;
 }
@@ -66,13 +70,19 @@ export function validateSortieInput(payload: unknown): SortieInput {
   }
 
   const description = normalizeOptionalText(input.description, 240);
+  const manufacturer_ref = normalizeOptionalText(input.manufacturer_ref, 64);
+  const search_label = normalizeOptionalText(input.search_label, 120);
+  const tyre_catalog_id = input.tyre_catalog_id == null || input.tyre_catalog_id === '' ? null : validateId(input.tyre_catalog_id);
 
   return {
     date,
     immatriculation,
     code_sap,
+    manufacturer_ref,
+    search_label,
     quantite,
     description,
+    tyre_catalog_id,
   };
 }
 
@@ -95,23 +105,6 @@ export function validateBulkRows(payload: unknown) {
       throw error;
     }
   });
-}
-
-export function assertSameOrigin(request: Request) {
-  const method = request.method.toUpperCase();
-  if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) return;
-
-  const origin = request.headers.get('origin');
-  const host = request.headers.get('host');
-
-  if (!origin || !host) {
-    throw new ValidationError('Origine de requête manquante');
-  }
-
-  const originHost = new URL(origin).host;
-  if (originHost !== host) {
-    throw new ValidationError('Origine non autorisée');
-  }
 }
 
 export function errorResponse(error: unknown) {

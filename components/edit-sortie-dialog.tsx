@@ -12,7 +12,7 @@ export function EditSortieDialog({
   onSubmit,
 }: {
   open: boolean;
-  form: { date: string; immatriculation: string; code_sap: string; quantite: string; description: string };
+  form: { date: string; immatriculation: string; code_sap: string; manufacturer_ref: string; search_label: string; tyre_catalog_id: string; quantite: string; description: string; tyre_search: string };
   loading: boolean;
   error?: string;
   onChange: (key: string, value: string) => void;
@@ -37,6 +37,14 @@ export function EditSortieDialog({
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">Code SAP</label>
             <input type="text" value={form.code_sap} onChange={(e) => onChange('code_sap', e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Référence fabricant</label>
+            <input type="text" value={form.manufacturer_ref} onChange={(e) => onChange('manufacturer_ref', e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Libellé de recherche</label>
+            <input type="text" value={form.search_label} onChange={(e) => onChange('search_label', e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">Quantité *</label>

@@ -9,8 +9,8 @@ export async function POST(request: Request) {
     const rows = validateBulkRows(body);
 
     const insert = db.prepare(`
-      INSERT INTO sorties (date, immatriculation, code_sap, quantite, description, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+      INSERT INTO sorties (date, immatriculation, code_sap, manufacturer_ref, search_label, quantite, description, tyre_catalog_id, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
     `);
 
     const existing = db.prepare(`
@@ -19,6 +19,7 @@ export async function POST(request: Request) {
         AND date = ?
         AND immatriculation = ?
         AND COALESCE(code_sap, '') = COALESCE(?, '')
+        AND COALESCE(manufacturer_ref, '') = COALESCE(?, '')
         AND quantite = ?
         AND COALESCE(description, '') = COALESCE(?, '')
       LIMIT 1
@@ -30,14 +31,14 @@ export async function POST(request: Request) {
 
     const tx = db.transaction(() => {
       rows.forEach((row, index) => {
-        const duplicate = existing.get(row.date, row.immatriculation, row.code_sap ?? null, row.quantite, row.description ?? null);
+        const duplicate = existing.get(row.date, row.immatriculation, row.code_sap ?? null, row.manufacturer_ref ?? null, row.quantite, row.description ?? null);
         if (duplicate) {
           skipped++;
           errors.push({ row: index + 1, message: 'Doublon détecté' });
           return;
         }
 
-        insert.run(row.date, row.immatriculation, row.code_sap ?? null, row.quantite, row.description ?? null);
+        insert.run(row.date, row.immatriculation, row.code_sap ?? null, row.manufacturer_ref ?? null, row.search_label ?? null, row.quantite, row.description ?? null, row.tyre_catalog_id ?? null);
         inserted++;
       });
     });

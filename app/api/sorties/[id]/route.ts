@@ -40,16 +40,16 @@ export async function PUT(
 
     const result = db.prepare(`
       UPDATE sorties
-      SET date = ?, immatriculation = ?, code_sap = ?, quantite = ?, description = ?, updated_at = datetime('now')
+      SET date = ?, immatriculation = ?, code_sap = ?, manufacturer_ref = ?, search_label = ?, quantite = ?, description = ?, tyre_catalog_id = ?, updated_at = datetime('now')
       WHERE id = ? AND deleted_at IS NULL
-    `).run(input.date, input.immatriculation, input.code_sap ?? null, input.quantite, input.description ?? null, id);
+    `).run(input.date, input.immatriculation, input.code_sap ?? null, input.manufacturer_ref ?? null, input.search_label ?? null, input.quantite, input.description ?? null, input.tyre_catalog_id ?? null, id);
 
     if (result.changes === 0) {
       return NextResponse.json({ code: 'NOT_FOUND', message: 'Sortie non trouvée' }, { status: 404 });
     }
 
     const updated = db.prepare('SELECT * FROM sorties WHERE id = ?').get(id);
-    logAudit({ actor: getActor(request), action: 'update', entityType: 'sortie', entityId: id, details: { immatriculation: input.immatriculation, quantite: input.quantite, date: input.date } });
+    logAudit({ actor: getActor(request), action: 'update', entityType: 'sortie', entityId: id, details: { immatriculation: input.immatriculation, quantite: input.quantite, date: input.date, code_sap: input.code_sap, manufacturer_ref: input.manufacturer_ref } });
     return NextResponse.json(updated);
   } catch (error) {
     return errorResponse(error);

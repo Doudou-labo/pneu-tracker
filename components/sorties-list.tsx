@@ -35,6 +35,8 @@ export function SortiesList({
               <th className="px-3 py-2 text-left font-medium text-gray-500">Date</th>
               <th className="px-3 py-2 text-left font-medium text-gray-500">Immat.</th>
               <th className="px-3 py-2 text-left font-medium text-gray-500">Code SAP</th>
+              <th className="px-3 py-2 text-left font-medium text-gray-500">Réf fabricant</th>
+              <th className="px-3 py-2 text-left font-medium text-gray-500">Libellé</th>
               <th className="px-3 py-2 text-left font-medium text-gray-500">Qté</th>
               <th className="px-3 py-2 text-left font-medium text-gray-500">Description</th>
               <th className="px-3 py-2 text-left font-medium text-gray-500">Maj</th>
@@ -47,6 +49,8 @@ export function SortiesList({
                 <td className="whitespace-nowrap px-3 py-2.5 text-gray-700">{formatDateFr(item.date)}</td>
                 <td className="px-3 py-2.5 font-mono font-medium text-gray-900">{item.immatriculation}</td>
                 <td className="px-3 py-2.5 text-gray-500">{item.code_sap || '—'}</td>
+                <td className="px-3 py-2.5 text-gray-500">{item.manufacturer_ref || '—'}</td>
+                <td className="max-w-[160px] truncate px-3 py-2.5 text-gray-500">{item.search_label || '—'}</td>
                 <td className="px-3 py-2.5 text-center font-semibold text-blue-700">{item.quantite}</td>
                 <td className="max-w-xs truncate px-3 py-2.5 text-gray-600">{item.description || '—'}</td>
                 <td className="whitespace-nowrap px-3 py-2.5 text-xs text-gray-400">{formatDateTimeFr(item.updated_at || item.created_at)}</td>
@@ -70,7 +74,9 @@ export function SortiesList({
               </div>
               <span className="rounded-full bg-blue-100 px-2 py-0.5 text-sm font-bold text-blue-800">{item.quantite} pneus</span>
             </div>
-            {item.code_sap ? <p className="mt-1 text-xs text-gray-500">SAP : {item.code_sap}</p> : null}
+            <p className="mt-1 text-xs text-gray-500">SAP : {item.code_sap || '—'}</p>
+            {item.manufacturer_ref ? <p className="mt-1 text-xs text-gray-500">Réf fabricant : {item.manufacturer_ref}</p> : null}
+            {item.search_label ? <p className="mt-1 text-xs text-gray-500">Libellé : {item.search_label}</p> : null}
             {item.description ? <p className="mt-1 text-sm text-gray-600">{item.description}</p> : null}
             <p className="mt-2 text-xs text-gray-400">Mise à jour : {formatDateTimeFr(item.updated_at || item.created_at)}</p>
             <div className="mt-3 flex gap-2">

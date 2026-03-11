@@ -17,9 +17,9 @@ export async function GET(request: Request) {
     const params: unknown[] = [];
 
     if (search) {
-      conditions.push('(immatriculation LIKE ? OR COALESCE(code_sap,\'\') LIKE ? OR COALESCE(description,\'\') LIKE ?)');
+      conditions.push('(immatriculation LIKE ? OR COALESCE(code_sap,\'\') LIKE ? OR COALESCE(manufacturer_ref,\'\') LIKE ? OR COALESCE(search_label,\'\') LIKE ? OR COALESCE(description,\'\') LIKE ?)');
       const like = `%${search}%`;
-      params.push(like, like, like);
+      params.push(like, like, like, like, like);
     }
 
     if (immatriculation) {
@@ -61,19 +61,20 @@ export async function POST(request: Request) {
         AND date = ?
         AND immatriculation = ?
         AND COALESCE(code_sap, '') = COALESCE(?, '')
+        AND COALESCE(manufacturer_ref, '') = COALESCE(?, '')
         AND quantite = ?
         AND COALESCE(description, '') = COALESCE(?, '')
       LIMIT 1
-    `).get(input.date, input.immatriculation, input.code_sap, input.quantite, input.description);
+    `).get(input.date, input.immatriculation, input.code_sap, input.manufacturer_ref, input.quantite, input.description);
 
     if (duplicate) {
       return NextResponse.json({ code: 'DUPLICATE', message: 'Une sortie identique existe déjà.' }, { status: 409 });
     }
 
     const result = db.prepare(`
-      INSERT INTO sorties (date, immatriculation, code_sap, quantite, description, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, datetime('now'), datetime('now'))
-    `).run(input.date, input.immatriculation, input.code_sap ?? null, input.quantite, input.description ?? null);
+      INSERT INTO sorties (date, immatriculation, code_sap, manufacturer_ref, search_label, quantite, description, tyre_catalog_id, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+    `).run(input.date, input.immatriculation, input.code_sap ?? null, input.manufacturer_ref ?? null, input.search_label ?? null, input.quantite, input.description ?? null, input.tyre_catalog_id ?? null);
 
     const newSortie = db.prepare('SELECT * FROM sorties WHERE id = ?').get(result.lastInsertRowid);
     logAudit({
@@ -81,7 +82,7 @@ export async function POST(request: Request) {
       action: 'create',
       entityType: 'sortie',
       entityId: Number(result.lastInsertRowid),
-      details: { immatriculation: input.immatriculation, quantite: input.quantite, date: input.date },
+      details: { immatriculation: input.immatriculation, quantite: input.quantite, date: input.date, code_sap: input.code_sap, manufacturer_ref: input.manufacturer_ref },
     });
     return NextResponse.json(newSortie, { status: 201 });
   } catch (error) {

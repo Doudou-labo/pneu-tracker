@@ -16,17 +16,31 @@ import { useSorties } from '@/hooks/use-sorties';
 import { buildCsv, parseCsvLine } from '@/lib/csv';
 import { fetchAuditLogs } from '@/lib/api';
 import { formatDateFr, formatDateTimeFr } from '@/lib/formatters';
-import { AuditLog, Sortie, SortieInput } from '@/lib/types';
+import { AuditLog, Sortie, SortieInput, TyreCatalogItem } from '@/lib/types';
 import { normalizeImmatriculation } from '@/lib/validators';
 
 type Tab = 'form' | 'history' | 'dashboard';
 type Toast = { id: number; type: 'success' | 'error' | 'info'; text: string };
-type FormState = { date: string; immatriculation: string; code_sap: string; quantite: string; description: string };
+type FormState = {
+  date: string;
+  immatriculation: string;
+  code_sap: string;
+  manufacturer_ref: string;
+  search_label: string;
+  tyre_search: string;
+  tyre_catalog_id: string;
+  quantite: string;
+  description: string;
+};
 
 const defaultForm = (): FormState => ({
   date: new Date().toISOString().split('T')[0],
   immatriculation: '',
   code_sap: '',
+  manufacturer_ref: '',
+  search_label: '',
+  tyre_search: '',
+  tyre_catalog_id: '',
   quantite: '',
   description: '',
 });
@@ -47,6 +61,9 @@ function toPayload(form: FormState): SortieInput {
     date: form.date,
     immatriculation: normalizeImmatriculation(form.immatriculation),
     code_sap: form.code_sap.trim() || null,
+    manufacturer_ref: form.manufacturer_ref.trim() || null,
+    search_label: form.search_label.trim() || null,
+    tyre_catalog_id: form.tyre_catalog_id ? Number(form.tyre_catalog_id) : null,
     quantite: Number(form.quantite),
     description: form.description.trim() || null,
   };
@@ -74,17 +91,17 @@ export default function Home() {
     setFilters,
     uniqueImmats,
     lastSaved,
-    create,
-    update,
-    remove,
-    bulkImport,
-    resetFilters,
     hasPrev,
     hasNext,
     pageStart,
     pageEnd,
     nextPage,
     prevPage,
+    create,
+    update,
+    remove,
+    bulkImport,
+    resetFilters,
   } = useSorties();
 
   const addToast = (type: Toast['type'], text: string) => {
@@ -138,6 +155,28 @@ export default function Home() {
     setFormErrors((current) => ({ ...current, [key]: undefined, global: undefined }));
   };
 
+  const handleTyreSearchChange = (value: string) => {
+    setForm((current) => ({ ...current, tyre_search: value }));
+  };
+
+  const applyTyreSelection = (target: 'create' | 'edit', item: TyreCatalogItem) => {
+    const updater = (current: FormState): FormState => ({
+      ...current,
+      tyre_search: item.sap_code || item.manufacturer_ref || item.search_label || item.description,
+      tyre_catalog_id: String(item.id),
+      code_sap: item.sap_code || current.code_sap,
+      manufacturer_ref: item.manufacturer_ref || current.manufacturer_ref,
+      search_label: item.search_label || current.search_label,
+      description: item.description || current.description,
+    });
+
+    if (target === 'create') {
+      setForm(updater);
+    } else {
+      setEditForm(updater);
+    }
+  };
+
   const handleQuickQty = (qty: number) => setForm((current) => ({ ...current, quantite: String(qty) }));
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -165,6 +204,10 @@ export default function Home() {
       date: sortie.date,
       immatriculation: sortie.immatriculation,
       code_sap: sortie.code_sap || '',
+      manufacturer_ref: sortie.manufacturer_ref || '',
+      search_label: sortie.search_label || '',
+      tyre_search: sortie.code_sap || sortie.manufacturer_ref || sortie.search_label || sortie.description || '',
+      tyre_catalog_id: sortie.tyre_catalog_id ? String(sortie.tyre_catalog_id) : '',
       quantite: String(sortie.quantite),
       description: sortie.description || '',
     });
@@ -201,8 +244,8 @@ export default function Home() {
 
   const handleExportCsv = () => {
     const csv = buildCsv([
-      ['Date', 'Immatriculation', 'Code SAP', 'Quantité', 'Description'],
-      ...items.map((item) => [formatDateFr(item.date), item.immatriculation, item.code_sap || '', item.quantite, item.description || '']),
+      ['Date', 'Immatriculation', 'Code SAP', 'Référence fabricant', 'Libellé de recherche', 'Quantité', 'Description'],
+      ...items.map((item) => [formatDateFr(item.date), item.immatriculation, item.code_sap || '', item.manufacturer_ref || '', item.search_label || '', item.quantite, item.description || '']),
     ]);
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -238,6 +281,8 @@ export default function Home() {
         const dateIdx = headers.findIndex((item) => item === 'date');
         const immatIdx = headers.findIndex((item) => item.includes('immat'));
         const sapIdx = headers.findIndex((item) => item.includes('sap'));
+        const manufacturerIdx = headers.findIndex((item) => item.includes('référence fabricant') || item.includes('reference fabricant'));
+        const searchLabelIdx = headers.findIndex((item) => item.includes('libell'));
         const qteIdx = headers.findIndex((item) => item.includes('quantite') || item.includes('quantité') || item.includes('qté'));
         const descIdx = headers.findIndex((item) => item.includes('desc'));
 
@@ -250,6 +295,8 @@ export default function Home() {
             date,
             immatriculation: cols[immatIdx] || '',
             code_sap: cols[sapIdx] || '',
+            manufacturer_ref: cols[manufacturerIdx] || '',
+            search_label: cols[searchLabelIdx] || '',
             quantite: Number(cols[qteIdx] || 0),
             description: cols[descIdx] || '',
           });
@@ -295,6 +342,8 @@ export default function Home() {
           onChange={handleFormChange}
           onQuickQty={handleQuickQty}
           onSubmit={handleSubmit}
+          onTyreSearchChange={handleTyreSearchChange}
+          onTyreSelect={(item) => applyTyreSelection('create', item)}
           recentHint={recentHint}
         />
       ) : null}
