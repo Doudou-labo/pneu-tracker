@@ -15,13 +15,50 @@ function constantTimeEqual(a: string, b: string) {
   return out === 0;
 }
 
+function getAllowedOrigins(request: NextRequest) {
+  const configured = (process.env.APP_ALLOWED_ORIGINS || '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  if (configured.length > 0) return configured;
+
+  return [
+    'https://pneus.doudougen.xyz',
+    `https://${request.nextUrl.host}`,
+    `http://${request.nextUrl.host}`,
+  ];
+}
+
+function extractRequestOrigin(request: NextRequest) {
+  const origin = request.headers.get('origin');
+  if (origin) return origin;
+
+  const referer = request.headers.get('referer');
+  if (!referer) return null;
+
+  try {
+    return new URL(referer).origin;
+  } catch {
+    return null;
+  }
+}
+
 export function proxy(request: NextRequest) {
   if (request.nextUrl.pathname.startsWith('/api/')) {
-    const allowedOrigin = `${request.nextUrl.protocol}//${request.nextUrl.host}`;
     if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method)) {
-      const origin = request.headers.get('origin');
-      if (!origin || origin !== allowedOrigin) {
-        return NextResponse.json({ code: 'FORBIDDEN_ORIGIN', message: 'Origine non autorisée' }, { status: 403 });
+      const requestOrigin = extractRequestOrigin(request);
+      const allowedOrigins = getAllowedOrigins(request);
+
+      if (!requestOrigin || !allowedOrigins.includes(requestOrigin)) {
+        return NextResponse.json(
+          {
+            code: 'FORBIDDEN_ORIGIN',
+            message: 'Origine non autorisée',
+            details: { requestOrigin, allowedOrigins },
+          },
+          { status: 403 }
+        );
       }
     }
 
