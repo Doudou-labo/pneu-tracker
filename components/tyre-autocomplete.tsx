@@ -8,10 +8,18 @@ export function TyreAutocomplete({
   value,
   onChange,
   onSelect,
+  label = 'Recherche pneu',
+  placeholder = 'Code SAP, réf fabricant, dimension ou mot-clé',
+  helperText = 'Recherche prédictive multi-critères. Sélection = auto-remplissage doux.',
+  compact = false,
 }: {
   value: string;
   onChange: (value: string) => void;
   onSelect: (item: TyreCatalogItem) => void;
+  label?: string;
+  placeholder?: string;
+  helperText?: string;
+  compact?: boolean;
 }) {
   const [items, setItems] = useState<TyreCatalogItem[]>([]);
   const [open, setOpen] = useState(false);
@@ -69,18 +77,18 @@ export function TyreAutocomplete({
   };
 
   return (
-    <div className="relative sm:col-span-2">
-      <label className="mb-1 block text-sm font-medium text-gray-700">Recherche pneu</label>
+    <div className={`relative ${compact ? '' : 'sm:col-span-2'}`}>
+      <label className="mb-1 block text-sm font-medium text-gray-700">{label}</label>
       <input
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={onKeyDown}
         onFocus={() => value.trim().length >= 2 && items.length > 0 && setOpen(true)}
-        placeholder="Code SAP, réf fabricant, dimension ou mot-clé"
+        placeholder={placeholder}
         className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
-      <p className="mt-1 text-xs text-gray-400">Recherche prédictive multi-critères. Sélection = auto-remplissage doux.</p>
+      {helperText ? <p className="mt-1 text-xs text-gray-400">{helperText}</p> : null}
       {open ? (
         <div className="absolute z-30 mt-2 max-h-80 w-full overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-xl">
           {loading ? <div className="px-4 py-3 text-sm text-gray-500">Recherche…</div> : null}

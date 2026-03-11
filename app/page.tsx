@@ -217,6 +217,10 @@ export default function Home() {
     setEditForm((current) => ({ ...current, [key]: key === 'immatriculation' ? value.toUpperCase() : value }));
   };
 
+  const handleEditTyreSearchChange = (value: string) => {
+    setEditForm((current) => ({ ...current, tyre_search: value }));
+  };
+
   const handleEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editing) return;
@@ -360,6 +364,7 @@ export default function Home() {
                 uniqueImmats={uniqueImmats}
                 onChange={(key, value) => setFilters((current) => ({ ...current, [key]: value, offset: 0 }))}
                 onReset={resetFilters}
+                onSearchSelect={(item) => setFilters((current) => ({ ...current, search: item.sap_code || item.manufacturer_ref || item.search_label || item.description, offset: 0 }))}
               />
 
               <div className="flex flex-wrap items-center justify-between gap-2">
@@ -395,6 +400,8 @@ export default function Home() {
         loading={saving}
         error={undefined}
         onChange={handleEditChange}
+        onTyreSearchChange={handleEditTyreSearchChange}
+        onTyreSelect={(item) => applyTyreSelection('edit', item)}
         onClose={() => setEditing(null)}
         onSubmit={handleEdit}
       />

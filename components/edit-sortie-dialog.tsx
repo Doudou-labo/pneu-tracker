@@ -1,6 +1,7 @@
 'use client';
 
-import { SortieInput } from '@/lib/types';
+import { SortieInput, TyreCatalogItem } from '@/lib/types';
+import { TyreAutocomplete } from './tyre-autocomplete';
 
 export function EditSortieDialog({
   open,
@@ -8,6 +9,8 @@ export function EditSortieDialog({
   loading,
   error,
   onChange,
+  onTyreSearchChange,
+  onTyreSelect,
   onClose,
   onSubmit,
 }: {
@@ -16,6 +19,8 @@ export function EditSortieDialog({
   loading: boolean;
   error?: string;
   onChange: (key: string, value: string) => void;
+  onTyreSearchChange: (value: string) => void;
+  onTyreSelect: (item: TyreCatalogItem) => void;
   onClose: () => void;
   onSubmit: (e: React.FormEvent) => void;
 }) {
@@ -23,9 +28,18 @@ export function EditSortieDialog({
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div role="dialog" aria-modal="true" aria-labelledby="edit-sortie-title" className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+      <div role="dialog" aria-modal="true" aria-labelledby="edit-sortie-title" className="w-full max-w-xl rounded-xl bg-white p-6 shadow-xl">
         <h2 id="edit-sortie-title" className="mb-4 text-lg font-semibold text-gray-800">✏️ Modifier la sortie</h2>
         <form onSubmit={onSubmit} className="flex flex-col gap-3">
+          <TyreAutocomplete
+            value={form.tyre_search}
+            onChange={onTyreSearchChange}
+            onSelect={onTyreSelect}
+            label="Recherche pneu"
+            placeholder="SAP, réf fabricant, libellé ou description"
+            helperText="Sélectionne une référence pour mettre à jour automatiquement les champs produit."
+            compact
+          />
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">Date *</label>
             <input type="date" value={form.date} onChange={(e) => onChange('date', e.target.value)} required className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
