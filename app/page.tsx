@@ -13,14 +13,15 @@ import { PaginationControls } from '@/components/pagination-controls';
 import { AuditLogPanel } from '@/components/audit-log-panel';
 import { ToastViewport } from '@/components/toast-viewport';
 import { useSorties } from '@/hooks/use-sorties';
+import { useToast } from '@/hooks/use-toast';
+import { useDashboard } from '@/hooks/use-dashboard';
+import { useAudit } from '@/hooks/use-audit';
 import { buildCsv, parseCsvLine } from '@/lib/csv';
-import { fetchAuditLogs, fetchDashboard } from '@/lib/api';
 import { formatDateFr, formatDateTimeFr } from '@/lib/formatters';
-import { AuditLog, DashboardPayload, Sortie, SortieInput, TyreCatalogItem } from '@/lib/types';
+import { Sortie, SortieInput, TyreCatalogItem } from '@/lib/types';
 import { normalizeImmatriculation } from '@/lib/validators';
 
 type Tab = 'form' | 'history' | 'dashboard';
-type Toast = { id: number; type: 'success' | 'error' | 'info'; text: string };
 type FormState = {
   date: string;
   immatriculation: string;
@@ -49,7 +50,7 @@ function validateClientForm(form: FormState) {
   const errors: Partial<Record<keyof SortieInput | 'global', string>> = {};
   const quantity = Number(form.quantite);
   if (!form.date) errors.date = 'La date est obligatoire';
-  if (!form.immatriculation.trim()) errors.immatriculation = 'L’immatriculation est obligatoire';
+  if (!form.immatriculation.trim()) errors.immatriculation = 'L\u2019immatriculation est obligatoire';
   if (!Number.isInteger(quantity) || quantity <= 0 || quantity > 20) errors.quantite = 'Quantité entre 1 et 20';
   if (form.code_sap.length > 32) errors.code_sap = '32 caractères max';
   if (form.description.length > 240) errors.description = '240 caractères max';
@@ -76,10 +77,13 @@ export default function Home() {
   const [editForm, setEditForm] = useState<FormState>(defaultForm());
   const [editing, setEditing] = useState<Sortie | null>(null);
   const [deletingSortie, setDeletingSortie] = useState<Sortie | null>(null);
-  const [toasts, setToasts] = useState<Toast[]>([]);
-  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
-  const [dashboard, setDashboard] = useState<DashboardPayload | null>(null);
+  const [selectedTyre, setSelectedTyre] = useState<TyreCatalogItem | null>(null);
+  const [lastSortie, setLastSortie] = useState<Sortie | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const { toasts, toast: addToast } = useToast();
+  const { dashboard, refreshDashboard } = useDashboard();
+  const { auditLogs, refreshAudit } = useAudit();
 
   const {
     items,
@@ -105,34 +109,10 @@ export default function Home() {
     resetFilters,
   } = useSorties();
 
-  const addToast = (type: Toast['type'], text: string) => {
-    const id = Date.now() + Math.random();
-    setToasts((current) => [...current, { id, type, text }]);
-    setTimeout(() => setToasts((current) => current.filter((toast) => toast.id !== id)), 4000);
-  };
-
-  const refreshAudit = async () => {
-    try {
-      const data = await fetchAuditLogs(12);
-      setAuditLogs(data.items);
-    } catch {
-      // audit non bloquant pour l'UI
-    }
-  };
-
-  const refreshDashboard = async () => {
-    try {
-      const data = await fetchDashboard();
-      setDashboard(data);
-    } catch {
-      // dashboard non bloquant
-    }
-  };
-
   useEffect(() => {
     void refreshAudit();
     void refreshDashboard();
-  }, []);
+  }, [refreshAudit, refreshDashboard]);
 
   const totalPneus = useMemo(() => items.reduce((acc, item) => acc + item.quantite, 0), [items]);
   const thisMonth = new Date().toISOString().slice(0, 7);
@@ -162,6 +142,7 @@ export default function Home() {
 
     if (target === 'create') {
       setForm(updater);
+      setSelectedTyre(item);
     } else {
       setEditForm(updater);
     }
@@ -179,13 +160,32 @@ export default function Home() {
 
     try {
       const created = await create(toPayload(form));
-      setForm(defaultForm());
+      setLastSortie(created);
+
+      // Si "Conserver le pneu" est coché, garder le pneu sélectionné
+      const keepTyre = typeof window !== 'undefined' && localStorage.getItem('pneu-tracker-keep-tyre') === 'true';
+      if (keepTyre && selectedTyre) {
+        const kept = {
+          ...defaultForm(),
+          tyre_search: selectedTyre.sap_code || selectedTyre.manufacturer_ref || selectedTyre.search_label || selectedTyre.description,
+          tyre_catalog_id: String(selectedTyre.id),
+          code_sap: selectedTyre.sap_code || '',
+          manufacturer_ref: selectedTyre.manufacturer_ref || '',
+          search_label: selectedTyre.search_label || '',
+          description: selectedTyre.description || '',
+        };
+        setForm(kept);
+      } else {
+        setForm(defaultForm());
+        setSelectedTyre(null);
+      }
+
       void refreshAudit();
       void refreshDashboard();
       addToast('success', `✅ Sortie enregistrée : ${created.immatriculation} · ${created.quantite} pneus`);
     } catch (error) {
-      setFormErrors({ global: error instanceof Error ? error.message : 'Erreur lors de l’enregistrement' });
-      addToast('error', error instanceof Error ? error.message : 'Erreur lors de l’enregistrement');
+      setFormErrors({ global: error instanceof Error ? error.message : 'Erreur lors de l\u2019enregistrement' });
+      addToast('error', error instanceof Error ? error.message : 'Erreur lors de l\u2019enregistrement');
     }
   };
 
@@ -343,6 +343,8 @@ export default function Home() {
           onTyreSearchChange={handleTyreSearchChange}
           onTyreSelect={(item) => applyTyreSelection('create', item)}
           recentHint={recentHint}
+          lastSortie={lastSortie}
+          selectedTyre={selectedTyre}
         />
       ) : null}
 
