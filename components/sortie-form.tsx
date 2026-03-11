@@ -132,7 +132,7 @@ export function SortieForm({
         {/* BLOC RÉSUMÉ PNEU SÉLECTIONNÉ */}
         {selectedTyre ? (
           <div className="sm:col-span-2 rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-2 text-sm text-emerald-800">
-            ✅ <span className="font-semibold">{selectedTyre.brand || 'Sans marque'}</span> — {selectedTyre.manufacturer_ref || '—'} — SAP: {selectedTyre.sap_code || '—'}
+            ✅ <span className="font-semibold">{selectedTyre.brand || 'Sans marque'}</span> — {selectedTyre.description || '—'} — SAP: {selectedTyre.sap_code || '—'}
           </div>
         ) : null}
 
