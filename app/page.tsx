@@ -14,9 +14,9 @@ import { AuditLogPanel } from '@/components/audit-log-panel';
 import { ToastViewport } from '@/components/toast-viewport';
 import { useSorties } from '@/hooks/use-sorties';
 import { buildCsv, parseCsvLine } from '@/lib/csv';
-import { fetchAuditLogs } from '@/lib/api';
+import { fetchAuditLogs, fetchDashboard } from '@/lib/api';
 import { formatDateFr, formatDateTimeFr } from '@/lib/formatters';
-import { AuditLog, Sortie, SortieInput, TyreCatalogItem } from '@/lib/types';
+import { AuditLog, DashboardPayload, Sortie, SortieInput, TyreCatalogItem } from '@/lib/types';
 import { normalizeImmatriculation } from '@/lib/validators';
 
 type Tab = 'form' | 'history' | 'dashboard';
@@ -78,6 +78,7 @@ export default function Home() {
   const [deletingSortie, setDeletingSortie] = useState<Sortie | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [dashboard, setDashboard] = useState<DashboardPayload | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const {
@@ -119,34 +120,23 @@ export default function Home() {
     }
   };
 
+  const refreshDashboard = async () => {
+    try {
+      const data = await fetchDashboard();
+      setDashboard(data);
+    } catch {
+      // dashboard non bloquant
+    }
+  };
+
   useEffect(() => {
     void refreshAudit();
+    void refreshDashboard();
   }, []);
 
   const totalPneus = useMemo(() => items.reduce((acc, item) => acc + item.quantite, 0), [items]);
   const thisMonth = new Date().toISOString().slice(0, 7);
   const thisMonthQty = useMemo(() => items.filter((item) => item.date.startsWith(thisMonth)).reduce((acc, item) => acc + item.quantite, 0), [items, thisMonth]);
-  const statsByImmat = useMemo(() => Object.entries(
-    items.reduce((acc: Record<string, number>, item) => {
-      acc[item.immatriculation] = (acc[item.immatriculation] || 0) + item.quantite;
-      return acc;
-    }, {})
-  ).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([immat, total]) => ({ immat, total })), [items]);
-
-  const chartData = useMemo(() => {
-    const last6Months: Record<string, number> = {};
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date();
-      d.setMonth(d.getMonth() - i);
-      const key = d.toISOString().slice(0, 7);
-      last6Months[key] = 0;
-    }
-    items.forEach((item) => {
-      const month = item.date.slice(0, 7);
-      if (month in last6Months) last6Months[month] += item.quantite;
-    });
-    return Object.entries(last6Months).map(([month, total]) => ({ month: `${month.slice(5)}/${month.slice(2, 4)}`, total }));
-  }, [items]);
 
   const recentHint = items[0] ? `${items[0].immatriculation} · ${items[0].quantite} pneus` : undefined;
 
@@ -191,6 +181,7 @@ export default function Home() {
       const created = await create(toPayload(form));
       setForm(defaultForm());
       void refreshAudit();
+      void refreshDashboard();
       addToast('success', `✅ Sortie enregistrée : ${created.immatriculation} · ${created.quantite} pneus`);
     } catch (error) {
       setFormErrors({ global: error instanceof Error ? error.message : 'Erreur lors de l’enregistrement' });
@@ -228,6 +219,7 @@ export default function Home() {
       const updated = await update(editing.id, toPayload(editForm));
       setEditing(null);
       void refreshAudit();
+      void refreshDashboard();
       addToast('success', `✏️ Sortie modifiée : ${updated.immatriculation}`);
     } catch (error) {
       addToast('error', error instanceof Error ? error.message : 'Erreur lors de la modification');
@@ -239,6 +231,7 @@ export default function Home() {
     try {
       await remove(deletingSortie.id);
       void refreshAudit();
+      void refreshDashboard();
       addToast('success', `🗑️ Sortie supprimée : ${deletingSortie.immatriculation}`);
       setDeletingSortie(null);
     } catch (error) {
@@ -308,6 +301,7 @@ export default function Home() {
 
         const result = await bulkImport(rows);
         void refreshAudit();
+        void refreshDashboard();
         addToast('success', `📥 Import terminé : ${result.inserted} ajoutée(s), ${result.skipped} ignorée(s)`);
         if (result.errors.length) {
           addToast('info', `ℹ️ ${result.errors.slice(0, 3).map((item) => `L${item.row}: ${item.message}`).join(' · ')}`);
@@ -387,10 +381,10 @@ export default function Home() {
       ) : null}
 
       {tab === 'dashboard' ? (
-        items.length === 0 ? (
+        !dashboard || dashboard.summary.totalLines === 0 ? (
           <div className="rounded-xl border border-gray-200 bg-white p-12 text-center text-gray-400">Aucune donnée à afficher</div>
         ) : (
-          <DashboardCharts chartData={chartData} statsByImmat={statsByImmat} />
+          <DashboardCharts data={dashboard} />
         )
       ) : null}
 

@@ -1,4 +1,4 @@
-import { Sortie, SortiesQueryResult, SortieInput, TyreCatalogItem } from './types';
+import { DashboardPayload, Sortie, SortiesQueryResult, SortieInput, TyreCatalogItem } from './types';
 
 export type SortiesFilters = {
   search: string;
@@ -46,6 +46,10 @@ export async function fetchAuditLogs(limit = 20) {
 
 export async function fetchTyreSuggestions(q: string, limit = 8) {
   return request<{ items: TyreCatalogItem[] }>(`/api/tyres/suggest?q=${encodeURIComponent(q)}&limit=${limit}`);
+}
+
+export async function fetchDashboard() {
+  return request<DashboardPayload>('/api/dashboard');
 }
 
 export async function createSortie(input: SortieInput) {

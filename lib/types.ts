@@ -41,6 +41,14 @@ export interface TyreCatalogItem {
   season: string | null;
 }
 
+export interface DashboardPayload {
+  summary: { totalLines: number; totalQuantity: number; distinctRefs: number; topBrand: string };
+  topBrands: Array<{ label: string; lines: number; quantity: number }>;
+  seasonStats: Array<{ label: string; lines: number; quantity: number }>;
+  topSapCodes: Array<{ sapCode: string; description: string; brand: string; lines: number; quantity: number }>;
+  diameterStats: Array<{ label: string; lines: number; quantity: number }>;
+}
+
 export type SortieInput = {
   date: string;
   immatriculation: string;
