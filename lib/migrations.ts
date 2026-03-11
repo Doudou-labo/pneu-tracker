@@ -132,11 +132,36 @@ export function runMigrations(db: Database.Database): void {
     (db.prepare('SELECT version FROM schema_migrations').all() as Array<{ version: number }>).map((r) => r.version),
   );
 
+  // Migration from old system: if updated_at column exists (old inline migration),
+  // mark all historical migrations as applied
+  const hasOldSchema = db.prepare("SELECT 1 FROM pragma_table_info('sorties') WHERE name = 'updated_at'").get();
+  if (hasOldSchema && applied.size === 0) {
+    const bootstrap = db.transaction(() => {
+      for (const m of migrations) {
+        if (m.version < 7) {
+          db.prepare('INSERT INTO schema_migrations (version, applied_at) VALUES (?, datetime(\'now\'))').run(m.version);
+        }
+      }
+    });
+    bootstrap();
+  }
+
   const pending = migrations.filter((m) => !applied.has(m.version)).sort((a, b) => a.version - b.version);
 
   for (const migration of pending) {
     const run = db.transaction(() => {
-      db.exec(migration.sql);
+      // Wrap migration in try-catch to handle "duplicate column" errors gracefully
+      // This allows migrations to be idempotent
+      try {
+        db.exec(migration.sql);
+      } catch (err: any) {
+        // If error is about duplicate column, log and continue (already exists)
+        if (err.message?.includes('duplicate column name')) {
+          console.warn(`Migration ${migration.version}: Column already exists, skipping: ${err.message}`);
+        } else {
+          throw err; // Re-throw other errors
+        }
+      }
       db.prepare('INSERT INTO schema_migrations (version, applied_at) VALUES (?, datetime(\'now\'))').run(migration.version);
     });
     run();
