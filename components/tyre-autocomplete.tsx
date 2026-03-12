@@ -5,7 +5,7 @@ import { fetchTyreSuggestions } from '@/lib/api';
 import { TyreCatalogItem } from '@/lib/types';
 
 function highlightMatch(text: string, term: string) {
-  if (!term || !text) return text;
+  if (!term || !text || term.includes('*')) return text;
   const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const regex = new RegExp(`(${escaped})`, 'gi');
   const parts = text.split(regex);
@@ -25,7 +25,7 @@ export function TyreAutocomplete({
   onSelect,
   label = 'Recherche pneu',
   placeholder = 'Code SAP, réf fabricant, dimension ou mot-clé',
-  helperText = 'Recherche prédictive multi-critères. Sélection = auto-remplissage doux.',
+  helperText = 'Recherche prédictive multi-critères. Astuce : utilise * pour remplacer une partie inconnue (ex. S2055516*MICPCY).',
   compact = false,
 }: {
   value: string;

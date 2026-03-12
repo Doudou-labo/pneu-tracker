@@ -3,6 +3,22 @@ import db from '@/lib/db';
 import { getActor, logAudit } from '@/lib/audit';
 import { errorResponse, validateSortieInput } from '@/lib/validators';
 
+function hasEnoughMeaningfulChars(term: string) {
+  return term.replace(/\*/g, '').trim().length >= 2;
+}
+
+function escapeLike(term: string) {
+  return term.replace(/[\\%_]/g, '\\$&');
+}
+
+function toSearchPattern(term: string) {
+  const normalized = term.trim().replace(/\*+/g, '*');
+  if (normalized.includes('*')) {
+    return escapeLike(normalized).replace(/\*/g, '%');
+  }
+  return `%${normalized}%`;
+}
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -16,9 +32,9 @@ export async function GET(request: Request) {
     const conditions = ['deleted_at IS NULL'];
     const params: unknown[] = [];
 
-    if (search) {
-      conditions.push('(immatriculation LIKE ? OR COALESCE(code_sap,\'\') LIKE ? OR COALESCE(manufacturer_ref,\'\') LIKE ? OR COALESCE(search_label,\'\') LIKE ? OR COALESCE(description,\'\') LIKE ?)');
-      const like = `%${search}%`;
+    if (search && (!search.includes('*') || hasEnoughMeaningfulChars(search))) {
+      conditions.push('(immatriculation LIKE ? ESCAPE \'\\\' OR COALESCE(code_sap,\'\') LIKE ? ESCAPE \'\\\' OR COALESCE(manufacturer_ref,\'\') LIKE ? ESCAPE \'\\\' OR COALESCE(search_label,\'\') LIKE ? ESCAPE \'\\\' OR COALESCE(description,\'\') LIKE ? ESCAPE \'\\\')');
+      const like = toSearchPattern(search);
       params.push(like, like, like, like, like);
     }
 
