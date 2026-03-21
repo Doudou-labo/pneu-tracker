@@ -18,7 +18,7 @@ import { useDashboard } from '@/hooks/use-dashboard';
 import { useAudit } from '@/hooks/use-audit';
 import { buildCsv, parseCsvLine } from '@/lib/csv';
 import { formatDateFr, formatDateTimeFr } from '@/lib/formatters';
-import { Sortie, SortieInput, TyreCatalogItem } from '@/lib/types';
+import { FactureFilter, Sortie, SortieInput, TyreCatalogItem } from '@/lib/types';
 import { normalizeImmatriculation } from '@/lib/validators';
 
 type Tab = 'form' | 'history' | 'dashboard';
@@ -105,6 +105,7 @@ export default function Home() {
     create,
     update,
     remove,
+    markFacture,
     bulkImport,
     resetFilters,
   } = useSorties();
@@ -223,6 +224,16 @@ export default function Home() {
       addToast('success', `✏️ Sortie modifiée : ${updated.immatriculation}`);
     } catch (error) {
       addToast('error', error instanceof Error ? error.message : 'Erreur lors de la modification');
+    }
+  };
+
+  const handleToggleFacture = async (sortie: Sortie) => {
+    try {
+      await markFacture(sortie.id);
+      const wasFacture = Boolean(sortie.facture_at);
+      addToast('success', wasFacture ? `↩️ Marquage facturé retiré : ${sortie.immatriculation}` : `✅ Sortie marquée comme facturée : ${sortie.immatriculation}`);
+    } catch (error) {
+      addToast('error', error instanceof Error ? error.message : 'Erreur lors du marquage');
     }
   };
 
@@ -357,7 +368,9 @@ export default function Home() {
                 immatriculation={filters.immatriculation}
                 dateFrom={filters.dateFrom}
                 dateTo={filters.dateTo}
+                facture={(filters.facture as FactureFilter) || 'all'}
                 uniqueImmats={uniqueImmats}
+                nonFactureCount={filters.facture === 'all' ? items.filter((item) => !item.facture_at).length : 0}
                 onChange={(key, value) => setFilters((current) => ({ ...current, [key]: value, offset: 0 }))}
                 onReset={resetFilters}
                 onSearchSelect={(item) => setFilters((current) => ({ ...current, search: item.sap_code || item.manufacturer_ref || item.search_label || item.description, offset: 0 }))}
@@ -376,7 +389,7 @@ export default function Home() {
             </div>
           </div>
 
-          <SortiesList items={items} total={total} loading={loading} onEdit={openEdit} onDelete={setDeletingSortie} />
+          <SortiesList items={items} total={total} loading={loading} onEdit={openEdit} onDelete={setDeletingSortie} onToggleFacture={handleToggleFacture} />
           <PaginationControls pageStart={pageStart} pageEnd={pageEnd} total={total} hasPrev={hasPrev} hasNext={hasNext} onPrev={prevPage} onNext={nextPage} />
           <AuditLogPanel logs={auditLogs} />
         </div>

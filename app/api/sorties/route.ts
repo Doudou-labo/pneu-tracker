@@ -29,8 +29,16 @@ export async function GET(request: Request) {
     const limit = Math.min(Math.max(Number(searchParams.get('limit') || 50), 1), 200);
     const offset = Math.max(Number(searchParams.get('offset') || 0), 0);
 
+    const factureFilter = (searchParams.get('facture') || 'all').trim();
+
     const conditions = ['deleted_at IS NULL'];
     const params: unknown[] = [];
+
+    if (factureFilter === 'facture') {
+      conditions.push('facture_at IS NOT NULL');
+    } else if (factureFilter === 'non_facture') {
+      conditions.push('facture_at IS NULL');
+    }
 
     if (search && (!search.includes('*') || hasEnoughMeaningfulChars(search))) {
       conditions.push('(immatriculation LIKE ? ESCAPE \'\\\' OR COALESCE(code_sap,\'\') LIKE ? ESCAPE \'\\\' OR COALESCE(manufacturer_ref,\'\') LIKE ? ESCAPE \'\\\' OR COALESCE(search_label,\'\') LIKE ? ESCAPE \'\\\' OR COALESCE(description,\'\') LIKE ? ESCAPE \'\\\')');

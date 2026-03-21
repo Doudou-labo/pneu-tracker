@@ -118,6 +118,14 @@ const migrations: Migration[] = [
       INSERT INTO tyre_catalog_fts(tyre_catalog_fts) VALUES('rebuild');
     `,
   },
+  {
+    version: 8,
+    description: 'Add facture_at column to sorties for billing tracking',
+    sql: `
+      ALTER TABLE sorties ADD COLUMN facture_at TEXT;
+      CREATE INDEX IF NOT EXISTS idx_sorties_facture_at ON sorties(facture_at);
+    `,
+  },
 ];
 
 export function runMigrations(db: Database.Database): void {

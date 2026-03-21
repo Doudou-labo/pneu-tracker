@@ -1,8 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { createSortie, deleteSortie, fetchSorties, importSorties, SortiesFilters, updateSortie } from '@/lib/api';
-import { Sortie, SortieInput } from '@/lib/types';
+import { createSortie, deleteSortie, fetchSorties, importSorties, SortiesFilters, toggleFacture, updateSortie } from '@/lib/api';
+import { FactureFilter, Sortie, SortieInput } from '@/lib/types';
 
 const defaultFilters: SortiesFilters = {
   search: '',
@@ -11,6 +11,7 @@ const defaultFilters: SortiesFilters = {
   dateTo: '',
   limit: 20,
   offset: 0,
+  facture: 'all',
 };
 
 export function useSorties() {
@@ -77,6 +78,12 @@ export function useSorties() {
     }
   }, []);
 
+  const markFacture = useCallback(async (id: number) => {
+    const updated = await toggleFacture(id);
+    setItems((current) => current.map((item) => item.id === id ? updated : item));
+    return updated;
+  }, []);
+
   const bulkImport = useCallback(async (rows: SortieInput[]) => {
     setImporting(true);
     try {
@@ -125,6 +132,7 @@ export function useSorties() {
     create,
     update,
     remove,
+    markFacture,
     bulkImport,
     resetFilters: () => setFilters(defaultFilters),
   };

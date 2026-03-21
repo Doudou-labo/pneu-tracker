@@ -11,7 +11,10 @@ export interface Sortie {
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
+  facture_at: string | null;
 }
+
+export type FactureFilter = 'all' | 'facture' | 'non_facture';
 
 export interface SortiesQueryResult {
   items: Sortie[];

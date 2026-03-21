@@ -1,4 +1,4 @@
-import { DashboardPayload, Sortie, SortiesQueryResult, SortieInput, TyreCatalogItem } from './types';
+import { DashboardPayload, FactureFilter, Sortie, SortiesQueryResult, SortieInput, TyreCatalogItem } from './types';
 
 export type SortiesFilters = {
   search: string;
@@ -7,6 +7,7 @@ export type SortiesFilters = {
   dateTo: string;
   limit: number;
   offset: number;
+  facture: FactureFilter;
 };
 
 async function request<T>(input: string, init?: RequestInit): Promise<T> {
@@ -62,6 +63,10 @@ export async function updateSortie(id: number, input: SortieInput) {
 
 export async function deleteSortie(id: number) {
   return request<{ success: true; id: number }>(`/api/sorties/${id}`, { method: 'DELETE' });
+}
+
+export async function toggleFacture(id: number) {
+  return request<Sortie>(`/api/sorties/${id}/facture`, { method: 'PATCH' });
 }
 
 export async function importSorties(rows: SortieInput[]) {
