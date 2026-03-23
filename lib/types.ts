@@ -48,7 +48,7 @@ export interface DashboardPayload {
   summary: { totalLines: number; totalQuantity: number; distinctRefs: number; topBrand: string };
   topBrands: Array<{ label: string; lines: number; quantity: number }>;
   seasonStats: Array<{ label: string; lines: number; quantity: number }>;
-  topSapCodes: Array<{ sapCode: string; manufacturer_ref: string; brand: string; diameter: string; search_label: string; lines: number; quantity: number }>;
+  topSapCodes: Array<{ sapCode: string; description: string; lines: number; quantity: number }>;
   diameterStats: Array<{ label: string; lines: number; quantity: number }>;
 }
 

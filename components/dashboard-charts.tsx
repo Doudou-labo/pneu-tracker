@@ -15,7 +15,7 @@ type DashboardData = {
   summary: { totalLines: number; totalQuantity: number; distinctRefs: number; topBrand: string };
   topBrands: Array<{ label: string; lines: number; quantity: number }>;
   seasonStats: Array<{ label: string; lines: number; quantity: number }>;
-  topSapCodes: Array<{ sapCode: string; manufacturer_ref: string; brand: string; diameter: string; search_label: string; lines: number; quantity: number }>;
+  topSapCodes: Array<{ sapCode: string; description: string; lines: number; quantity: number }>;
   diameterStats: Array<{ label: string; lines: number; quantity: number }>;
 };
 
@@ -102,8 +102,7 @@ export function DashboardCharts({ data }: { data: DashboardData }) {
               <thead>
                 <tr className="border-b border-gray-100 text-left text-gray-500">
                   <th className="py-2">SAP</th>
-                  <th className="py-2">Référence</th>
-                  <th className="py-2">Dim.</th>
+                  <th className="py-2">Description</th>
                   <th className="py-2">Qté</th>
                 </tr>
               </thead>
@@ -111,8 +110,7 @@ export function DashboardCharts({ data }: { data: DashboardData }) {
                 {data.topSapCodes.map((item) => (
                   <tr key={item.sapCode} className="border-b border-gray-50 align-top">
                     <td className="py-2 pr-3 font-mono text-gray-900">{item.sapCode}</td>
-                    <td className="py-2 pr-3 text-xs text-gray-600">{item.manufacturer_ref}</td>
-                    <td className="py-2 pr-3 text-gray-600">{item.diameter}</td>
+                    <td className="py-2 pr-3 text-xs text-gray-600">{item.description}</td>
                     <td className="py-2 font-semibold text-blue-700">{item.quantity}</td>
                   </tr>
                 ))}
