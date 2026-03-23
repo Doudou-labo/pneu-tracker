@@ -39,7 +39,7 @@ export function DashboardCharts({ data, period, onPeriodChange }: { data: Dashbo
           <button
             key={key}
             onClick={() => onPeriodChange(key)}
-            className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${period === key ? 'bg-blue-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+            className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${period === key ? 'bg-[#144390] text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}
           >
             {label}
           </button>
@@ -62,10 +62,10 @@ export function DashboardCharts({ data, period, onPeriodChange }: { data: Dashbo
           <div className="mt-2 text-2xl font-bold text-purple-900">{data.summary.distinctRefs}</div>
           <div className="text-sm text-purple-700">références distinctes</div>
         </div>
-        <div className="rounded-xl border border-orange-200 bg-orange-50 p-4 shadow-sm">
-          <div className="text-xs font-semibold uppercase tracking-wide text-orange-600">Top marque</div>
-          <div className="mt-2 truncate text-2xl font-bold text-orange-900">{data.summary.topBrand}</div>
-          <div className="text-sm text-orange-700">la plus sortie</div>
+        <div className="rounded-xl border border-[#144390]/20 bg-[#F0F4FA] p-4 shadow-sm">
+          <div className="text-xs font-semibold uppercase tracking-wide text-[#144390]">Top marque</div>
+          <div className="mt-2 truncate text-2xl font-bold text-[#144390]">{data.summary.topBrand}</div>
+          <div className="text-sm text-[#144390]/70">la plus sortie</div>
         </div>
       </div>
 
@@ -175,5 +175,8 @@ export function DashboardCharts({ data, period, onPeriodChange }: { data: Dashbo
         </div>
       </div>
     </div>
+  );
+}
+v>
   );
 }

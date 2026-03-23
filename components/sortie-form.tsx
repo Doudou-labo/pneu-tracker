@@ -116,7 +116,7 @@ export function SortieForm({
           <input ref={quantiteRef} type="number" value={form.quantite} onChange={(e) => onChange('quantite', e.target.value)} onKeyDown={handleQuantiteKeyDown} min="1" max="20" placeholder="4" required className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
           <div className="mt-2 flex flex-wrap gap-2">
             {qtyButtons.map((qty) => (
-              <button key={qty} type="button" onClick={() => onQuickQty(qty)} className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100">
+              <button key={qty} type="button" onClick={() => onQuickQty(qty)} className="rounded-full border border-[#144390] bg-white px-3 py-1 text-xs font-medium text-[#144390] hover:bg-gray-50">
                 +{qty}
               </button>
             ))}
@@ -157,7 +157,7 @@ export function SortieForm({
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700">Référence fabricant</label>
-              <input type="text" value={form.manufacturer_ref} onChange={(e) => onChange('manufacturer_ref', e.target.value)} placeholder="Ex: AP1951H1" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <input type="text" value={form.manufacturer_ref} onChange={(e) => onChange('manufacturer_ref', e.target.value)} placeholder="Ex: AP1951H1" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#144390]" />
             </div>
             <div className="sm:col-span-2">
               <label className="mb-1 block text-sm font-medium text-gray-700">Libellé de recherche</label>
@@ -190,4 +190,7 @@ export function SortieForm({
     </div>
   );
 }
+
+
+
 

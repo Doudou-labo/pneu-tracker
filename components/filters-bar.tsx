@@ -101,10 +101,12 @@ export function FiltersBar({
         </div>
         <div className="flex flex-col gap-1">
           <label className="text-xs font-medium text-gray-500">Au</label>
-          <input type="date" value={dateTo} onChange={(e) => onChange('dateTo', e.target.value)} className="rounded-lg border border-gray-300 px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          <input type="date" value={dateTo} onChange={(e) => onChange('dateTo', e.target.value)} className="rounded-lg border border-gray-300 px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#144390]" />
         </div>
         {(search || immatriculation || dateFrom || dateTo) ? <button onClick={onReset} className="rounded-lg px-3 py-2 text-sm text-gray-500 hover:bg-gray-100 hover:text-gray-700">✕ Reset</button> : <div />}
       </div>
     </div>
   );
+}
+;
 }

@@ -331,9 +331,10 @@ export default function Home() {
       <ToastViewport toasts={toasts} />
 
       <div className="mb-6 flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">🏎️ Suivi Sorties Pneus</h1>
-          <p className="mt-0.5 text-sm text-gray-500">
+        <div className="rounded-xl bg-[#144390] px-6 py-4 text-white shadow-md">
+          <h1 className="text-2xl font-bold">Pneu Tracker</h1>
+          <p className="mt-0.5 text-sm text-white/80">Euromaster</p>
+          <p className="mt-2 text-xs text-white/60">
             {total} sortie{total > 1 ? 's' : ''} · {totalPneus} pneus affichés
             {lastSaved ? ` · dernière action ${formatDateTimeFr(lastSaved)}` : ''}
           </p>

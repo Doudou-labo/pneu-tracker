@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f9fafb;
-  --foreground: #171717;
+  --background: #F0F4FA;
+  --foreground: #1a1a2e;
   color-scheme: light;
 }
 
@@ -11,6 +11,12 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  /* Palette Euromaster */
+  --color-euro-blue: #144390;
+  --color-euro-blue-dark: #0d305c;
+  --color-euro-yellow: #F9E700;
+  --color-euro-yellow-dark: #d4b800;
+  --color-euro-green: #10B981;
 }
 
 html,
