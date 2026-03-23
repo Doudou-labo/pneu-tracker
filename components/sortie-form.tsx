@@ -138,8 +138,9 @@ export function SortieForm({
 
         {/* TOGGLE AVANCÉS */}
         <div className="sm:col-span-2">
-          <button type="button" onClick={() => setShowAdvanced(!showAdvanced)} className="text-xs text-gray-500 hover:text-gray-700 transition-colors">
-            {showAdvanced ? '▴ Masquer les détails' : '▾ Détails avancés'}
+          <button type="button" onClick={() => setShowAdvanced(!showAdvanced)} className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-800 transition-colors">
+            <span>{showAdvanced ? '▴' : '▾'}</span>
+            <span>{showAdvanced ? 'Masquer les détails avancés' : 'Afficher les détails avancés (SAP, réf, libellé…)'}</span>
           </button>
         </div>
 
