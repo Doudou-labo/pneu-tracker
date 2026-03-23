@@ -7,5 +7,6 @@ export function formatDateTimeFr(value: string) {
   return new Intl.DateTimeFormat('fr-FR', {
     dateStyle: 'short',
     timeStyle: 'short',
+    timeZone: 'Europe/Paris',
   }).format(new Date(value));
 }
