@@ -4,9 +4,11 @@ export function formatDateFr(d: string) {
 }
 
 export function formatDateTimeFr(value: string) {
+  // Les timestamps SQLite sont stockés sans 'T' ni 'Z' → forcer parsing UTC
+  const normalized = value.replace(' ', 'T') + (value.includes('Z') || value.includes('+') ? '' : 'Z');
   return new Intl.DateTimeFormat('fr-FR', {
     dateStyle: 'short',
     timeStyle: 'short',
     timeZone: 'Europe/Paris',
-  }).format(new Date(value));
+  }).format(new Date(normalized));
 }
