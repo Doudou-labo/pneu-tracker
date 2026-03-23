@@ -17,6 +17,11 @@ export class ValidationError extends Error {
 }
 
 export function normalizeImmatriculation(value: string) {
+  const clean = value.trim().toUpperCase().replace(/[\s\-]+/g, '');
+  // Format plaque française standard: AA-000-AA
+  const match = clean.match(/^([A-Z]{1,2})(\d{3})([A-Z]{1,2})$/);
+  if (match) return `${match[1]}-${match[2]}-${match[3]}`;
+  // Format libre: normaliser les tirets uniquement
   return value.trim().toUpperCase().replace(/\s+/g, '-').replace(/-+/g, '-');
 }
 
