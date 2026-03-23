@@ -30,8 +30,8 @@ export function SortiesList({
     <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
       <div className="mb-4 text-sm text-gray-500">{items.length} sortie(s) affichée(s) · {total} au total</div>
 
-      {/* Desktop table */}
-      <div className="hidden overflow-x-auto md:block">
+      {/* Desktop table — masqué, on utilise les cartes partout */}
+      <div className="hidden overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-100">
@@ -85,8 +85,8 @@ export function SortiesList({
         </table>
       </div>
 
-      {/* Mobile cards */}
-      <div className="flex flex-col gap-3 md:hidden">
+      {/* Cards — vue universelle mobile + desktop */}
+      <div className="flex flex-col gap-3">
         {items.map((item) => (
           <div
             key={item.id}
