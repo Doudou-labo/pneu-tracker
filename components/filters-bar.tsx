@@ -58,6 +58,19 @@ export function FiltersBar({
         })}
       </div>
 
+      {/* Raccourcis temporels */}
+      <div className="flex flex-wrap gap-2">
+        {[
+          { label: "Aujourd'hui", getDates: () => { const d = new Date().toISOString().slice(0,10); return { from: d, to: d }; } },
+          { label: 'Cette semaine', getDates: () => { const now = new Date(); const day = now.getDay() || 7; const mon = new Date(now); mon.setDate(now.getDate() - day + 1); return { from: mon.toISOString().slice(0,10), to: now.toISOString().slice(0,10) }; } },
+          { label: 'Ce mois', getDates: () => { const now = new Date(); const first = new Date(now.getFullYear(), now.getMonth(), 1); return { from: first.toISOString().slice(0,10), to: now.toISOString().slice(0,10) }; } },
+        ].map(({ label, getDates }) => (
+          <button key={label} type="button" onClick={() => { const { from, to } = getDates(); onChange('dateFrom', from); onChange('dateTo', to); }} className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+            {label}
+          </button>
+        ))}
+      </div>
+
       {/* Filtres search/immat/dates */}
       <div className="grid grid-cols-1 gap-2 md:grid-cols-[minmax(0,2fr)_auto_auto_auto_auto] md:items-start">
         <TyreAutocomplete
@@ -75,8 +88,14 @@ export function FiltersBar({
             <option key={item} value={item}>{item}</option>
           ))}
         </select>
-        <input type="date" value={dateFrom} onChange={(e) => onChange('dateFrom', e.target.value)} className="rounded-lg border border-gray-300 px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" title="Du" />
-        <input type="date" value={dateTo} onChange={(e) => onChange('dateTo', e.target.value)} className="rounded-lg border border-gray-300 px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" title="Au" />
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-gray-500">Du</label>
+          <input type="date" value={dateFrom} onChange={(e) => onChange('dateFrom', e.target.value)} className="rounded-lg border border-gray-300 px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-gray-500">Au</label>
+          <input type="date" value={dateTo} onChange={(e) => onChange('dateTo', e.target.value)} className="rounded-lg border border-gray-300 px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
         {(search || immatriculation || dateFrom || dateTo) ? <button onClick={onReset} className="rounded-lg px-3 py-2 text-sm text-gray-500 hover:bg-gray-100 hover:text-gray-700">✕ Reset</button> : <div />}
       </div>
     </div>

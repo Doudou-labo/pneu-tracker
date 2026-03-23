@@ -31,7 +31,7 @@ export function SortiesList({
       <div className="mb-4 text-sm text-gray-500">{items.length} sortie(s) affichée(s) · {total} au total</div>
 
       {/* Desktop table — masqué, on utilise les cartes partout */}
-      <div className="hidden overflow-x-auto">
+      <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-100">
@@ -86,7 +86,7 @@ export function SortiesList({
       </div>
 
       {/* Cards — vue universelle mobile + desktop */}
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3 md:hidden">
         {items.map((item) => (
           <div
             key={item.id}
