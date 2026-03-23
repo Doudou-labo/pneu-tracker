@@ -34,8 +34,10 @@ export async function GET() {
 
     const topSapCodes = db.prepare(`
       SELECT COALESCE(s.code_sap, 'Sans SAP') as sapCode,
-             COALESCE(MAX(s.description), '—') as description,
+             COALESCE(MAX(tc.manufacturer_ref), '—') as manufacturer_ref,
              COALESCE(MAX(tc.brand), '—') as brand,
+             COALESCE(MAX(tc.diameter), '—') as diameter,
+             COALESCE(MAX(tc.search_label), '—') as search_label,
              COUNT(*) as lines,
              COALESCE(SUM(s.quantite), 0) as quantity
       FROM sorties s
@@ -44,7 +46,7 @@ export async function GET() {
       GROUP BY COALESCE(s.code_sap, 'Sans SAP')
       ORDER BY quantity DESC, lines DESC
       LIMIT 10
-    `).all() as Array<{ sapCode: string; description: string; brand: string; lines: number; quantity: number }>;
+    `).all() as Array<{ sapCode: string; manufacturer_ref: string; brand: string; diameter: string; search_label: string; lines: number; quantity: number }>;
 
     const diameterStats = db.prepare(`
       SELECT COALESCE(tc.diameter, 'Non renseigné') as label, COUNT(*) as lines, COALESCE(SUM(s.quantite), 0) as quantity
