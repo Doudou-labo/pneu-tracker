@@ -391,6 +391,20 @@ export default function Home() {
                     <input ref={fileInputRef} type="file" accept=".csv" onChange={handleImportCsv} className="hidden" />
                   </label>
                   <button onClick={handleExportCsv} className="rounded-lg border border-green-300 bg-green-50 px-3 py-1.5 text-sm font-medium text-green-700 transition-colors hover:bg-green-100">⬇️ CSV (Excel)</button>
+                  <button
+                    onClick={() => {
+                      const params = new URLSearchParams();
+                      if (filters.search) params.set('search', filters.search);
+                      if (filters.immatriculation) params.set('immatriculation', filters.immatriculation);
+                      if (filters.dateFrom) params.set('dateFrom', filters.dateFrom);
+                      if (filters.dateTo) params.set('dateTo', filters.dateTo);
+                      if (filters.facture !== 'all') params.set('facture', filters.facture);
+                      window.open(`/api/sorties/export/pdf?${params.toString()}`, '_blank');
+                    }}
+                    className="rounded-lg border border-red-300 bg-red-50 px-3 py-1.5 text-sm font-medium text-red-700 transition-colors hover:bg-red-100"
+                  >
+                    📄 PDF
+                  </button>
                 </div>
               </div>
             </div>
