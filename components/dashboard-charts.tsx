@@ -81,7 +81,7 @@ export function DashboardCharts({ data }: { data: DashboardData }) {
                 cx="50%"
                 cy="50%"
                 outerRadius={80}
-                label={({ name, percent, value }) => percent >= 0.05 ? `${name}: ${value}` : ''}
+                label={({ name, percent, value }: { name?: string; percent?: number; value?: number }) => (percent ?? 0) >= 0.05 ? `${name}: ${value}` : ''}
               >
                 {mappedSeasonStats.map((entry) => (
                   <Cell key={entry.label} fill={entry.color} />
