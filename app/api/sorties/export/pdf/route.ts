@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import db from '@/lib/db';
+import PDFDocument from 'pdfkit';
 
 function escapeLike(s: string) {
   return s.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
@@ -62,62 +63,114 @@ export async function GET(request: Request) {
     const totalPneus = sorties.reduce((sum, s) => sum + (s.quantite || 0), 0);
     const dateExport = new Date().toLocaleDateString('fr-FR');
 
-    const rows = sorties.map((s, i) => {
-      const bg = i % 2 === 0 ? '#F0F4FA' : '#ffffff';
+    // Build PDF
+    const doc = new PDFDocument({ size: 'A4', layout: 'landscape', margin: 40 });
+    const chunks: Buffer[] = [];
+
+    doc.on('data', (chunk: Buffer) => chunks.push(chunk));
+
+    const pdfReady = new Promise<Buffer>((resolve, reject) => {
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+      doc.on('error', reject);
+    });
+
+    // Header
+    const BLUE = '#144390';
+    doc.rect(0, 0, doc.page.width, 60).fill(BLUE);
+    doc.fillColor('#ffffff').fontSize(20).text('Pneu Tracker — Export Sorties', 40, 18, { align: 'center' });
+    doc.fontSize(10).text(`Export du ${dateExport}  ·  ${sorties.length} sortie(s)  ·  ${totalPneus} pneus`, 40, 42, { align: 'center' });
+
+    // Table setup
+    const startY = 80;
+    const colWidths = [70, 100, 80, 260, 45, 55]; // Date, Immat, SAP, Desc, Qté, Facturé
+    const headers = ['Date', 'Immatriculation', 'Code SAP', 'Description', 'Qté', 'Facturé'];
+    const tableX = 40;
+    const rowHeight = 20;
+    const headerHeight = 24;
+
+    // Draw header row
+    let x = tableX;
+    doc.rect(tableX, startY, colWidths.reduce((a, b) => a + b, 0), headerHeight).fill(BLUE);
+    doc.fillColor('#ffffff').fontSize(9).font('Helvetica-Bold');
+    for (let i = 0; i < headers.length; i++) {
+      const align = i >= 4 ? 'center' : 'left';
+      doc.text(headers[i], x + 4, startY + 6, { width: colWidths[i] - 8, align });
+      x += colWidths[i];
+    }
+
+    // Draw rows
+    let y = startY + headerHeight;
+    doc.font('Helvetica').fontSize(8);
+
+    for (let idx = 0; idx < sorties.length; idx++) {
+      // New page check
+      if (y + rowHeight > doc.page.height - 50) {
+        doc.addPage();
+        y = 40;
+        // Redraw header on new page
+        x = tableX;
+        doc.rect(tableX, y, colWidths.reduce((a, b) => a + b, 0), headerHeight).fill(BLUE);
+        doc.fillColor('#ffffff').fontSize(9).font('Helvetica-Bold');
+        for (let i = 0; i < headers.length; i++) {
+          const align = i >= 4 ? 'center' : 'left';
+          doc.text(headers[i], x + 4, y + 6, { width: colWidths[i] - 8, align });
+          x += colWidths[i];
+        }
+        doc.font('Helvetica').fontSize(8);
+        y += headerHeight;
+      }
+
+      const s = sorties[idx];
+      const bg = idx % 2 === 0 ? '#F0F4FA' : '#ffffff';
+      const tableWidth = colWidths.reduce((a, b) => a + b, 0);
+
+      // Row background
+      doc.rect(tableX, y, tableWidth, rowHeight).fill(bg);
+
+      // Row border
+      doc.rect(tableX, y, tableWidth, rowHeight).strokeColor('#e5e7eb').lineWidth(0.5).stroke();
+
+      doc.fillColor('#333333');
+
       const date = s.date ? s.date.split('-').reverse().join('/') : '—';
-      return `<tr style="background:${bg}">
-        <td>${date}</td>
-        <td><strong>${s.immatriculation || '—'}</strong></td>
-        <td>${s.code_sap || '—'}</td>
-        <td>${s.description ? s.description.slice(0, 55) : '—'}</td>
-        <td style="text-align:center;font-weight:bold">${s.quantite}</td>
-        <td style="text-align:center">${s.facture_at ? '✓' : ''}</td>
-      </tr>`;
-    }).join('');
+      const desc = s.description ? s.description.slice(0, 50) : '—';
+      const cells = [
+        date,
+        s.immatriculation || '—',
+        s.code_sap || '—',
+        desc,
+        String(s.quantite),
+        s.facture_at ? '✓' : '—',
+      ];
 
-    const html = `<!DOCTYPE html>
-<html lang="fr">
-<head>
-<meta charset="UTF-8">
-<title>Export Sorties — Pneu Tracker</title>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: Arial, sans-serif; font-size: 11px; color: #333; padding: 20px; }
-  h1 { color: #144390; font-size: 18px; text-align: center; margin-bottom: 4px; }
-  .subtitle { color: #666; font-size: 10px; text-align: center; margin-bottom: 16px; }
-  table { width: 100%; border-collapse: collapse; margin-top: 8px; }
-  th { background: #144390; color: white; padding: 6px 8px; text-align: left; font-size: 10px; }
-  td { padding: 5px 8px; border-bottom: 1px solid #e5e7eb; font-size: 10px; }
-  .footer { margin-top: 12px; text-align: right; color: #144390; font-weight: bold; font-size: 11px; }
-  @media print {
-    body { padding: 10px; }
-    button { display: none; }
-  }
-</style>
-</head>
-<body>
-  <h1>🚗 Pneu Tracker — Export Sorties</h1>
-  <div class="subtitle">Export du ${dateExport} · ${sorties.length} sortie(s) · ${totalPneus} pneus</div>
-  <table>
-    <thead>
-      <tr>
-        <th>Date</th>
-        <th>Immatriculation</th>
-        <th>Code SAP</th>
-        <th>Description</th>
-        <th style="text-align:center">Qté</th>
-        <th style="text-align:center">Facturé</th>
-      </tr>
-    </thead>
-    <tbody>${rows}</tbody>
-  </table>
-  <div class="footer">Total : ${sorties.length} sortie(s) · ${totalPneus} pneus</div>
-  <script>window.onload = () => { window.print(); }</script>
-</body>
-</html>`;
+      x = tableX;
+      for (let i = 0; i < cells.length; i++) {
+        const align = i >= 4 ? 'center' : 'left';
+        const fontStyle = i === 1 ? 'Helvetica-Bold' : 'Helvetica';
+        doc.font(fontStyle).text(cells[i], x + 4, y + 6, { width: colWidths[i] - 8, align, lineBreak: false });
+        x += colWidths[i];
+      }
 
-    return new NextResponse(html, {
-      headers: { 'Content-Type': 'text/html; charset=utf-8' },
+      y += rowHeight;
+    }
+
+    // Footer
+    y += 10;
+    doc.font('Helvetica-Bold').fontSize(10).fillColor(BLUE);
+    doc.text(`Total : ${sorties.length} sortie(s)  ·  ${totalPneus} pneus`, tableX, y, {
+      align: 'right',
+      width: colWidths.reduce((a, b) => a + b, 0),
+    });
+
+    doc.end();
+
+    const pdfBuffer = await pdfReady;
+
+    return new NextResponse(pdfBuffer as BodyInit, {
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': 'attachment; filename="sorties-pneus.pdf"',
+      },
     });
   } catch (err) {
     console.error(err);
