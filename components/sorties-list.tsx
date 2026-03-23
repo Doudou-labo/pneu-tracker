@@ -37,7 +37,7 @@ export function SortiesList({
             <tr className="border-b border-gray-100">
               <th className="w-8 px-2 py-2" title="Facturé">💶</th>
               <th className="px-3 py-2 text-left font-medium text-gray-500">Date</th>
-              <th className="px-3 py-2 text-left font-medium text-gray-500">Immat.</th>
+              <th className="px-3 py-2 text-left font-medium text-gray-500 whitespace-nowrap">Immat.</th>
               <th className="px-3 py-2 text-left font-medium text-gray-500">Code SAP</th>
               <th className="px-3 py-2 text-left font-medium text-gray-500">Réf fabricant</th>
               <th className="px-3 py-2 text-left font-medium text-gray-500">Libellé</th>
@@ -63,7 +63,7 @@ export function SortiesList({
                   </button>
                 </td>
                 <td className="whitespace-nowrap px-3 py-2.5 text-gray-700">{formatDateFr(item.date)}</td>
-                <td className="px-3 py-2.5 font-mono font-medium text-gray-900">{item.immatriculation}</td>
+                <td className="px-3 py-2.5 font-mono font-medium text-gray-900 whitespace-nowrap">{item.immatriculation}</td>
                 <td className="px-3 py-2.5 text-gray-500">{item.code_sap || '—'}</td>
                 <td className="px-3 py-2.5 text-gray-500">{item.manufacturer_ref || '—'}</td>
                 <td className="max-w-[160px] truncate px-3 py-2.5 text-gray-500">{item.search_label || '—'}</td>
