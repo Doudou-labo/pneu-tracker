@@ -330,8 +330,8 @@ export default function Home() {
     <div className="mx-auto max-w-5xl px-4 py-6">
       <ToastViewport toasts={toasts} />
 
-      {/* Header pleine largeur — dégradé bleu foncé → blanc */}
-      <div className="-mx-4 -mt-6 mb-0 bg-gradient-to-b from-[#0d305c] via-[#144390] to-white">
+      {/* Header pleine largeur — dégradé bleu foncé → blanc lisse */}
+      <div className="-mx-4 -mt-6 mb-0 bg-gradient-to-b from-[#0d305c] to-white">
         <div className="mx-auto max-w-5xl px-4 pt-4 pb-0">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
             <div className="px-1 pb-4 text-white">
