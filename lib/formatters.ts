@@ -1,6 +1,8 @@
 export function formatDateFr(d: string) {
   const [y, m, dd] = d.split('-');
-  return `${dd}/${m}/${y}`;
+  const date = new Date(parseInt(y), parseInt(m) - 1, parseInt(dd));
+  const jour = date.toLocaleDateString('fr-FR', { weekday: 'short' });
+  return `${jour} ${dd}/${m}`;
 }
 
 export function formatDateTimeFr(value: string) {

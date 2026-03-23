@@ -76,8 +76,8 @@ export function SortiesList({
                   )}
                 </td>
                 <td className="flex gap-1 px-3 py-2.5">
-                  <button onClick={() => onEdit(item)} className="rounded px-2 py-1 text-xs text-blue-500 transition-colors hover:bg-blue-50 hover:text-blue-700">✏️</button>
-                  <button onClick={() => onDelete(item)} className="rounded px-2 py-1 text-xs text-red-500 transition-colors hover:bg-red-50 hover:text-red-700">🗑️</button>
+                  <button onClick={() => onEdit(item)} aria-label="Modifier" className="rounded px-3 py-2 text-sm text-blue-500 transition-colors hover:bg-blue-50 hover:text-blue-700">✏️</button>
+                  <button onClick={() => onDelete(item)} aria-label="Supprimer" className="rounded px-3 py-2 text-sm text-red-500 transition-colors hover:bg-red-50 hover:text-red-700">🗑️</button>
                 </td>
               </tr>
             ))}
@@ -110,12 +110,21 @@ export function SortiesList({
             <div className="mt-3 flex gap-2">
               <button
                 onClick={() => onToggleFacture(item)}
-                className={`rounded border px-3 py-1 text-xs ${item.facture_at ? 'border-green-200 bg-green-50 text-green-700 hover:bg-green-100' : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-100'}`}
+                aria-label={item.facture_at ? `Retirer le statut facturé pour ${item.immatriculation}` : `Marquer comme facturé pour ${item.immatriculation}`}
+                className={`rounded border px-3 py-2 text-sm ${item.facture_at ? 'border-green-200 bg-green-50 text-green-700 hover:bg-green-100' : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-100'}`}
               >
                 {item.facture_at ? '✅ Facturé' : '⬜ Non facturé'}
               </button>
-              <button onClick={() => onEdit(item)} className="rounded border border-blue-200 bg-blue-50 px-3 py-1 text-xs text-blue-600 hover:bg-blue-100">✏️ Modifier</button>
-              <button onClick={() => onDelete(item)} className="rounded border border-red-200 bg-red-50 px-3 py-1 text-xs text-red-600 hover:bg-red-100">🗑️ Supprimer</button>
+              <button onClick={() => onEdit(item)} aria-label="Modifier" className="rounded border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-600 hover:bg-blue-100">✏️ Modifier</button>
+              <button onClick={() => onDelete(item)} aria-label="Supprimer" className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600 hover:bg-red-100">🗑️ Supprimer</button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+r:bg-red-100">🗑️ Supprimer</button>
             </div>
           </div>
         ))}

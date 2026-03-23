@@ -55,6 +55,11 @@ export function TyreAutocomplete({
     return () => document.removeEventListener('mousedown', handleMouseDown);
   }, []);
 
+  // Autofocus on mount
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
   useEffect(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
     if (value.trim().length < 2) {

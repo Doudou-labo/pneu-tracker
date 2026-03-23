@@ -120,12 +120,16 @@ export function SortieForm({
                 +{qty}
               </button>
             ))}
+            <div className="mt-1 flex items-center gap-1">
+              <button type="button" onClick={() => onQuickQty(Math.max(1, parseInt(form.quantite || '1') - 1))} className="rounded border border-gray-200 px-2 py-1 text-sm hover:bg-gray-50">−</button>
+              <button type="button" onClick={() => onQuickQty(parseInt(form.quantite || '1') + 1)} className="rounded border border-gray-200 px-2 py-1 text-sm hover:bg-gray-50">+</button>
+            </div>
           </div>
           {errors.quantite ? <p className="mt-1 text-xs text-red-600">{errors.quantite}</p> : null}
         </div>
         <div>
           <label className="mb-1 block text-sm font-medium text-gray-700">Date *</label>
-          <input type="date" value={form.date} onChange={(e) => onChange('date', e.target.value)} required className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          <input type="date" value={form.date} onChange={(e) => onChange('date', e.target.value)} required className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500" />
           {errors.date ? <p className="mt-1 text-xs text-red-600">{errors.date}</p> : null}
         </div>
 
@@ -181,6 +185,13 @@ export function SortieForm({
             Conserver le pneu
           </label>
           <span className="text-xs text-gray-400">Sélection recommandée via la recherche pneu, mais saisie libre toujours possible.</span>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+re toujours possible.</span>
         </div>
       </form>
     </div>
