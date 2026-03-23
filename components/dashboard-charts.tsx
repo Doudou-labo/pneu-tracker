@@ -39,7 +39,7 @@ export function DashboardCharts({ data, period, onPeriodChange }: { data: Dashbo
           <button
             key={key}
             onClick={() => onPeriodChange(key)}
-            className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${period === key ? 'bg-[#144390] text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+            className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${period === key ? 'bg-blue-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}
           >
             {label}
           </button>
@@ -47,10 +47,10 @@ export function DashboardCharts({ data, period, onPeriodChange }: { data: Dashbo
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-        <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 shadow-sm">
-          <div className="text-xs font-semibold uppercase tracking-wide text-blue-600">Sorties</div>
-          <div className="mt-2 text-2xl font-bold text-blue-900">{data.summary.totalLines}</div>
-          <div className="text-sm text-blue-700">lignes enregistrées</div>
+        <div className="rounded-xl border border-[#144390]/20 bg-[#F0F4FA] p-4 shadow-sm">
+          <div className="text-xs font-semibold uppercase tracking-wide text-[#144390]">Sorties</div>
+          <div className="mt-2 text-2xl font-bold text-[#144390]">{data.summary.totalLines}</div>
+          <div className="text-sm text-[#144390]">lignes enregistrées</div>
         </div>
         <div className="rounded-xl border border-green-200 bg-green-50 p-4 shadow-sm">
           <div className="text-xs font-semibold uppercase tracking-wide text-green-600">Quantité</div>
@@ -62,10 +62,10 @@ export function DashboardCharts({ data, period, onPeriodChange }: { data: Dashbo
           <div className="mt-2 text-2xl font-bold text-purple-900">{data.summary.distinctRefs}</div>
           <div className="text-sm text-purple-700">références distinctes</div>
         </div>
-        <div className="rounded-xl border border-[#144390]/20 bg-[#F0F4FA] p-4 shadow-sm">
-          <div className="text-xs font-semibold uppercase tracking-wide text-[#144390]">Top marque</div>
-          <div className="mt-2 truncate text-2xl font-bold text-[#144390]">{data.summary.topBrand}</div>
-          <div className="text-sm text-[#144390]/70">la plus sortie</div>
+        <div className="rounded-xl border border-orange-200 bg-orange-50 p-4 shadow-sm">
+          <div className="text-xs font-semibold uppercase tracking-wide text-orange-600">Top marque</div>
+          <div className="mt-2 truncate text-2xl font-bold text-orange-900">{data.summary.topBrand}</div>
+          <div className="text-sm text-orange-700">la plus sortie</div>
         </div>
       </div>
 
@@ -78,7 +78,7 @@ export function DashboardCharts({ data, period, onPeriodChange }: { data: Dashbo
               <XAxis dataKey="label" tick={{ fontSize: 10 }} tickFormatter={(v: string) => v.slice(5)} />
               <YAxis tick={{ fontSize: 12 }} />
               <Tooltip formatter={(v) => [`${v} pneus`, 'Quantité']} labelFormatter={(l) => `Date: ${l}`} />
-              <Bar dataKey="quantity" fill="#2563eb" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="quantity" fill="#144390" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -96,7 +96,7 @@ export function DashboardCharts({ data, period, onPeriodChange }: { data: Dashbo
                 <XAxis type="number" tick={{ fontSize: 12 }} />
                 <YAxis dataKey="label" type="category" tick={{ fontSize: 11 }} width={110} />
                 <Tooltip formatter={(v, name) => [v, name === 'quantity' ? 'Quantité' : 'Lignes']} />
-                <Bar dataKey="quantity" fill="#2563eb" radius={[0, 4, 4, 0]} />
+                <Bar dataKey="quantity" fill="#144390" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -149,7 +149,7 @@ export function DashboardCharts({ data, period, onPeriodChange }: { data: Dashbo
                     <td className="py-2 pr-3 text-xs text-gray-600" title={item.description}>
                       {item.description.length > 40 ? item.description.slice(0, 40) + '…' : item.description}
                     </td>
-                    <td className="py-2 font-semibold text-blue-700">{item.quantity}</td>
+                    <td className="py-2 font-semibold text-[#144390]">{item.quantity}</td>
                   </tr>
                 ))}
               </tbody>
@@ -175,8 +175,5 @@ export function DashboardCharts({ data, period, onPeriodChange }: { data: Dashbo
         </div>
       </div>
     </div>
-  );
-}
-v>
   );
 }

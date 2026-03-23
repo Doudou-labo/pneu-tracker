@@ -72,7 +72,7 @@ export function SortiesList({
                 <td className="px-3 py-2.5 text-gray-500">{item.code_sap || '—'}</td>
                 <td className="px-3 py-2.5 text-gray-500">{item.manufacturer_ref || '—'}</td>
                 <td className="max-w-[160px] truncate px-3 py-2.5 text-gray-500">{item.search_label || '—'}</td>
-                <td className="px-3 py-2.5 text-center font-semibold text-[#144390]">{item.quantite}</td>
+                <td className="px-3 py-2.5 text-center font-semibold text-blue-700">{item.quantite}</td>
                 <td className="max-w-xs truncate px-3 py-2.5 text-gray-600">{item.description || '—'}</td>
                 <td className="whitespace-nowrap px-3 py-2.5 text-xs text-gray-400">
                   {formatDateTimeFr(item.updated_at || item.created_at)}
@@ -81,7 +81,7 @@ export function SortiesList({
                   )}
                 </td>
                 <td className="flex gap-1 px-3 py-2.5">
-                  <button onClick={() => onEdit(item)} aria-label="Modifier" className="rounded px-3 py-2 text-sm text-blue-500 transition-colors hover:bg-blue-50 hover:text-blue-700">✏️</button>
+                  <button onClick={() => onEdit(item)} aria-label="Modifier" className="rounded px-3 py-2 text-sm text-[#144390] transition-colors hover:bg-blue-50 hover:text-blue-700">✏️</button>
                   <button onClick={() => setDeleteTarget(item)} aria-label="Supprimer" className="rounded px-3 py-2 text-sm text-red-500 transition-colors hover:bg-red-50 hover:text-red-700">🗑️</button>
                 </td>
               </tr>
@@ -102,7 +102,7 @@ export function SortiesList({
                 <span className="font-mono font-bold text-gray-900">{item.immatriculation}</span>
                 <span className="ml-2 text-xs text-gray-400">{formatDateFr(item.date)}</span>
               </div>
-              <span className="rounded-full bg-[#144390] px-2 py-0.5 text-sm font-bold text-white">{item.quantite} pneus</span>
+              <span className="rounded-full bg-blue-100 px-2 py-0.5 text-sm font-bold text-blue-800">{item.quantite} pneus</span>
             </div>
             <p className="mt-1 text-xs text-gray-500">SAP : {item.code_sap || '—'}</p>
             {item.manufacturer_ref ? <p className="mt-1 text-xs text-gray-500">Réf fabricant : {item.manufacturer_ref}</p> : null}
@@ -120,7 +120,7 @@ export function SortiesList({
               >
                 {item.facture_at ? '✅ Facturé' : '⬜ Non facturé'}
               </button>
-              <button onClick={() => onEdit(item)} aria-label="Modifier" className="rounded border border-[#144390] bg-white px-3 py-2 text-sm text-[#144390] hover:bg-gray-50">✏️ Modifier</button>
+              <button onClick={() => onEdit(item)} aria-label="Modifier" className="rounded border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-600 hover:bg-blue-100">✏️ Modifier</button>
               <button onClick={() => setDeleteTarget(item)} aria-label="Supprimer" className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600 hover:bg-red-100">🗑️ Supprimer</button>
             </div>
           </div>
