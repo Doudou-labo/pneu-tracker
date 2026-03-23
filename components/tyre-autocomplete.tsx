@@ -12,11 +12,21 @@ function highlightMatch(text: string, term: string) {
   if (parts.length === 1) return text;
   return parts.map((part, i) =>
     regex.test(part) ? (
-      <mark key={i} className="bg-yellow-200 text-inherit rounded-sm px-0.5">{part}</mark>
+      <mark key={i} className="rounded-sm bg-yellow-200 px-0.5 text-inherit">{part}</mark>
     ) : (
       part
     ),
   );
+}
+
+function extractDimension(item: TyreCatalogItem) {
+  const descriptionMatch = item.description.match(/\b\d{3}\/\d{2}R\d{2}\b/i);
+  if (descriptionMatch) return descriptionMatch[0].toUpperCase();
+  return item.diameter ? `R${item.diameter}` : null;
+}
+
+function getPrimaryValue(item: TyreCatalogItem) {
+  return item.sap_code || item.manufacturer_ref || item.search_label || item.description;
 }
 
 export function TyreAutocomplete({
@@ -27,6 +37,7 @@ export function TyreAutocomplete({
   placeholder = 'Code SAP, réf fabricant, dimension ou mot-clé',
   helperText = 'Recherche prédictive multi-critères. Astuce : utilise * pour remplacer une partie inconnue (ex. S2055516*MICPCY).',
   compact = false,
+  autoFocus = false,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -35,16 +46,17 @@ export function TyreAutocomplete({
   placeholder?: string;
   helperText?: string;
   compact?: boolean;
+  autoFocus?: boolean;
 }) {
   const [items, setItems] = useState<TyreCatalogItem[]>([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const requestIdRef = useRef(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Fermeture clic extérieur
   useEffect(() => {
     const handleMouseDown = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
@@ -55,30 +67,36 @@ export function TyreAutocomplete({
     return () => document.removeEventListener('mousedown', handleMouseDown);
   }, []);
 
-  // Autofocus on mount
   useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
+    if (autoFocus) {
+      inputRef.current?.focus();
+    }
+  }, [autoFocus]);
 
   useEffect(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
     if (value.trim().length < 2) {
       setItems([]);
       setOpen(false);
+      setLoading(false);
       return;
     }
 
+    const requestId = ++requestIdRef.current;
     timerRef.current = setTimeout(async () => {
       setLoading(true);
       try {
         const data = await fetchTyreSuggestions(value, 8);
+        if (requestId !== requestIdRef.current) return;
         setItems(data.items);
         setOpen(true);
-        setActiveIndex(-1);
+        setActiveIndex(data.items.length > 0 ? 0 : -1);
       } finally {
-        setLoading(false);
+        if (requestId === requestIdRef.current) {
+          setLoading(false);
+        }
       }
-    }, 180);
+    }, 140);
 
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
@@ -87,6 +105,7 @@ export function TyreAutocomplete({
 
   const selectItem = useCallback((item: TyreCatalogItem) => {
     onSelect(item);
+    setItems([]);
     setOpen(false);
     setActiveIndex(-1);
   }, [onSelect]);
@@ -108,7 +127,6 @@ export function TyreAutocomplete({
       }
     } else if (e.key === 'Tab') {
       setOpen(false);
-      // Laisser le focus passer naturellement au champ suivant
     } else if (e.key === 'Escape') {
       e.preventDefault();
       setOpen(false);
@@ -142,7 +160,7 @@ export function TyreAutocomplete({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={onKeyDown}
-        onFocus={() => value.trim().length >= 2 && items.length > 0 && setOpen(true)}
+        onFocus={() => value.trim().length >= 2 && (items.length > 0 || loading) && setOpen(true)}
         placeholder={placeholder}
         className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
@@ -152,22 +170,35 @@ export function TyreAutocomplete({
         <div id="tyre-listbox" role="listbox" className="absolute z-30 mt-2 max-h-80 w-full overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-xl">
           {loading ? <div className="px-4 py-3 text-sm text-gray-500">Recherche…</div> : null}
           {!loading && items.length === 0 ? <div className="px-4 py-3 text-sm text-gray-500">Aucune référence trouvée.</div> : null}
-          {!loading && items.map((item, index) => (
-            <button
-              key={item.id}
-              id={`tyre-opt-${index}`}
-              role="option"
-              aria-selected={index === activeIndex}
-              type="button"
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => selectItem(item)}
-              className={`block w-full border-b border-gray-100 px-4 py-3 text-left last:border-b-0 ${index === activeIndex ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
-            >
-              <div className="text-sm font-semibold text-gray-900">{highlightMatch(item.sap_code || 'Sans SAP', searchTerm)} {item.brand ? <span className="ml-2 font-normal text-gray-500">· {highlightMatch(item.brand, searchTerm)}</span> : null}</div>
-              <div className="text-sm text-gray-700">{highlightMatch(item.description, searchTerm)}</div>
-              <div className="text-xs text-gray-500">{highlightMatch(item.manufacturer_ref || '—', searchTerm)} · {highlightMatch(item.search_label || '—', searchTerm)}{item.season ? ` · ${item.season}` : ''}</div>
-            </button>
-          ))}
+          {!loading && items.map((item, index) => {
+            const dimension = extractDimension(item);
+            const primaryValue = getPrimaryValue(item);
+
+            return (
+              <button
+                key={item.id}
+                id={`tyre-opt-${index}`}
+                role="option"
+                aria-selected={index === activeIndex}
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => selectItem(item)}
+                className={`block w-full border-b border-gray-100 px-4 py-3 text-left last:border-b-0 ${index === activeIndex ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
+              >
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-700">SAP {highlightMatch(item.sap_code || '—', searchTerm)}</span>
+                  {item.brand ? <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">{highlightMatch(item.brand, searchTerm)}</span> : null}
+                  {dimension ? <span className="rounded-full bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-700">{highlightMatch(dimension, searchTerm)}</span> : null}
+                  {item.season ? <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">{highlightMatch(item.season, searchTerm)}</span> : null}
+                </div>
+                <div className="mt-2 text-sm font-semibold text-gray-900">{highlightMatch(primaryValue, searchTerm)}</div>
+                <div className="mt-1 text-sm text-gray-700">{highlightMatch(item.description, searchTerm)}</div>
+                <div className="mt-1 text-xs text-gray-500">
+                  Réf fabricant: {highlightMatch(item.manufacturer_ref || '—', searchTerm)} · Libellé: {highlightMatch(item.search_label || '—', searchTerm)}
+                </div>
+              </button>
+            );
+          })}
         </div>
       ) : null}
     </div>

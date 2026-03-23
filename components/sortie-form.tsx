@@ -4,6 +4,12 @@ import { useEffect, useRef, useState } from 'react';
 import { Sortie, SortieInput, TyreCatalogItem } from '@/lib/types';
 import { TyreAutocomplete } from './tyre-autocomplete';
 
+function extractDimension(item: TyreCatalogItem) {
+  const descriptionMatch = item.description.match(/\b\d{3}\/\d{2}R\d{2}\b/i);
+  if (descriptionMatch) return descriptionMatch[0].toUpperCase();
+  return item.diameter ? `R${item.diameter}` : null;
+}
+
 export function SortieForm({
   form,
   errors,
@@ -85,6 +91,8 @@ export function SortieForm({
     onTyreSearchChange(lastSortie.code_sap || lastSortie.manufacturer_ref || lastSortie.search_label || lastSortie.description || '');
   };
 
+  const selectedDimension = selectedTyre ? extractDimension(selectedTyre) : null;
+
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
       <div className="mb-4 flex items-center justify-between gap-3">
@@ -94,7 +102,7 @@ export function SortieForm({
         </div>
         <div className="flex items-center gap-2">
           {lastSortie ? (
-            <button type="button" onClick={handleRestoreLast} className="rounded-full bg-amber-50 border border-amber-200 px-3 py-1 text-xs font-medium text-amber-700 hover:bg-amber-100 transition-colors">
+            <button type="button" onClick={handleRestoreLast} className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-100">
               ↩ Refaire le même pneu
             </button>
           ) : null}
@@ -103,8 +111,7 @@ export function SortieForm({
       </div>
 
       <form ref={formRef} onSubmit={onSubmit} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {/* CHAMPS STANDARD */}
-        <TyreAutocomplete value={form.tyre_search} onChange={onTyreSearchChange} onSelect={handleTyreSelect} />
+        <TyreAutocomplete value={form.tyre_search} onChange={onTyreSearchChange} onSelect={handleTyreSelect} autoFocus />
 
         <div>
           <label className="mb-1 block text-sm font-medium text-gray-700">Immatriculation *</label>
@@ -133,21 +140,22 @@ export function SortieForm({
           {errors.date ? <p className="mt-1 text-xs text-red-600">{errors.date}</p> : null}
         </div>
 
-        {/* BLOC RÉSUMÉ PNEU SÉLECTIONNÉ */}
         {selectedTyre ? (
-          <div className="sm:col-span-2 rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-2 text-sm text-emerald-800">
-            ✅ <span className="font-semibold">{selectedTyre.brand || 'Sans marque'}</span> — {selectedTyre.description || '—'} — SAP: {selectedTyre.sap_code || '—'}
+          <div className="sm:col-span-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+            <div className="font-semibold">✅ {selectedTyre.brand || 'Sans marque'} · SAP {selectedTyre.sap_code || '—'}</div>
+            <div className="mt-1">{selectedTyre.description || '—'}</div>
+            <div className="mt-1 text-xs text-emerald-700">
+              Réf fabricant: {selectedTyre.manufacturer_ref || '—'} · Libellé: {selectedTyre.search_label || '—'}{selectedDimension ? ` · Dimension: ${selectedDimension}` : ''}{selectedTyre.season ? ` · Saison: ${selectedTyre.season}` : ''}
+            </div>
           </div>
         ) : null}
 
-        {/* TOGGLE AVANCÉS */}
         <div className="sm:col-span-2">
-          <button type="button" onClick={() => setShowAdvanced(!showAdvanced)} className="text-xs text-gray-500 hover:text-gray-700 transition-colors">
+          <button type="button" onClick={() => setShowAdvanced(!showAdvanced)} className="text-xs text-gray-500 transition-colors hover:text-gray-700">
             {showAdvanced ? '▴ Masquer les détails' : '▾ Détails avancés'}
           </button>
         </div>
 
-        {/* CHAMPS AVANCÉS */}
         {showAdvanced ? (
           <>
             <div>
@@ -175,12 +183,12 @@ export function SortieForm({
           <input type="hidden" value={form.tyre_catalog_id} readOnly />
         </div>
         {errors.global ? <p className="sm:col-span-2 text-sm text-red-600">{errors.global}</p> : null}
-        <div className="sm:col-span-2 flex items-center gap-3 flex-wrap">
+        <div className="sm:col-span-2 flex flex-wrap items-center gap-3">
           <button type="submit" disabled={loading} aria-busy={loading} className="flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-2 font-semibold text-white transition-colors hover:bg-blue-700 disabled:opacity-50">
             {loading && <span className="animate-spin">⏳</span>}
             {loading ? 'Enregistrement…' : 'Enregistrer'}
           </button>
-          <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
+          <label className="flex cursor-pointer select-none items-center gap-2 text-sm text-gray-600">
             <input type="checkbox" checked={keepTyre} onChange={(e) => setKeepTyre(e.target.checked)} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
             Conserver le pneu
           </label>
@@ -190,7 +198,3 @@ export function SortieForm({
     </div>
   );
 }
-
-
-
-

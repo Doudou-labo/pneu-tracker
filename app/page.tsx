@@ -50,7 +50,7 @@ function validateClientForm(form: FormState) {
   const errors: Partial<Record<keyof SortieInput | 'global', string>> = {};
   const quantity = Number(form.quantite);
   if (!form.date) errors.date = 'La date est obligatoire';
-  if (!form.immatriculation.trim()) errors.immatriculation = 'L\u2019immatriculation est obligatoire';
+  if (!form.immatriculation.trim()) errors.immatriculation = 'L’immatriculation est obligatoire';
   if (!Number.isInteger(quantity) || quantity <= 0 || quantity > 20) errors.quantite = 'Quantité entre 1 et 20';
   if (form.code_sap.length > 32) errors.code_sap = '32 caractères max';
   if (form.description.length > 240) errors.description = '240 caractères max';
@@ -67,6 +67,18 @@ function toPayload(form: FormState): SortieInput {
     tyre_catalog_id: form.tyre_catalog_id ? Number(form.tyre_catalog_id) : null,
     quantite: Number(form.quantite),
     description: form.description.trim() || null,
+  };
+}
+
+function getTyreSearchValue(item: TyreCatalogItem) {
+  return item.sap_code || item.manufacturer_ref || item.search_label || item.description;
+}
+
+function clearTyreSelection(state: FormState, nextSearch: string): FormState {
+  return {
+    ...state,
+    tyre_search: nextSearch,
+    tyre_catalog_id: '',
   };
 }
 
@@ -127,18 +139,19 @@ export default function Home() {
   };
 
   const handleTyreSearchChange = (value: string) => {
-    setForm((current) => ({ ...current, tyre_search: value }));
+    setForm((current) => clearTyreSelection(current, value));
+    setSelectedTyre(null);
   };
 
   const applyTyreSelection = (target: 'create' | 'edit', item: TyreCatalogItem) => {
     const updater = (current: FormState): FormState => ({
       ...current,
-      tyre_search: item.sap_code || item.manufacturer_ref || item.search_label || item.description,
+      tyre_search: getTyreSearchValue(item),
       tyre_catalog_id: String(item.id),
-      code_sap: item.sap_code || current.code_sap,
-      manufacturer_ref: item.manufacturer_ref || current.manufacturer_ref,
-      search_label: item.search_label || current.search_label,
-      description: item.description || current.description,
+      code_sap: item.sap_code || '',
+      manufacturer_ref: item.manufacturer_ref || '',
+      search_label: item.search_label || '',
+      description: item.description || '',
     });
 
     if (target === 'create') {
@@ -163,12 +176,11 @@ export default function Home() {
       const created = await create(toPayload(form));
       setLastSortie(created);
 
-      // Si "Conserver le pneu" est coché, garder le pneu sélectionné
       const keepTyre = typeof window !== 'undefined' && localStorage.getItem('pneu-tracker-keep-tyre') === 'true';
       if (keepTyre && selectedTyre) {
         const kept = {
           ...defaultForm(),
-          tyre_search: selectedTyre.sap_code || selectedTyre.manufacturer_ref || selectedTyre.search_label || selectedTyre.description,
+          tyre_search: getTyreSearchValue(selectedTyre),
           tyre_catalog_id: String(selectedTyre.id),
           code_sap: selectedTyre.sap_code || '',
           manufacturer_ref: selectedTyre.manufacturer_ref || '',
@@ -185,8 +197,8 @@ export default function Home() {
       void refreshDashboard();
       addToast('success', `✅ Sortie enregistrée : ${created.immatriculation} · ${created.quantite} pneus`);
     } catch (error) {
-      setFormErrors({ global: error instanceof Error ? error.message : 'Erreur lors de l\u2019enregistrement' });
-      addToast('error', error instanceof Error ? error.message : 'Erreur lors de l\u2019enregistrement');
+      setFormErrors({ global: error instanceof Error ? error.message : 'Erreur lors de l’enregistrement' });
+      addToast('error', error instanceof Error ? error.message : 'Erreur lors de l’enregistrement');
     }
   };
 
@@ -210,7 +222,7 @@ export default function Home() {
   };
 
   const handleEditTyreSearchChange = (value: string) => {
-    setEditForm((current) => ({ ...current, tyre_search: value }));
+    setEditForm((current) => clearTyreSelection(current, value));
   };
 
   const handleEdit = async (e: React.FormEvent) => {
@@ -330,7 +342,6 @@ export default function Home() {
     <div className="mx-auto max-w-5xl px-4 py-6">
       <ToastViewport toasts={toasts} />
 
-      {/* Header pleine largeur — dégradé bleu foncé → blanc lisse */}
       <div className="-mx-4 -mt-6 mb-0 bg-gradient-to-b from-[#0d305c] to-white">
         <div className="mx-auto max-w-5xl px-4 pt-4 pb-0">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
@@ -380,7 +391,7 @@ export default function Home() {
                 nonFactureCount={filters.facture === 'all' ? items.filter((item) => !item.facture_at).length : 0}
                 onChange={(key, value) => setFilters((current) => ({ ...current, [key]: value, offset: 0 }))}
                 onReset={resetFilters}
-                onSearchSelect={(item) => setFilters((current) => ({ ...current, search: item.sap_code || item.manufacturer_ref || item.search_label || item.description, offset: 0 }))}
+                onSearchSelect={(item) => setFilters((current) => ({ ...current, search: getTyreSearchValue(item), offset: 0 }))}
               />
 
               <div className="flex flex-wrap items-center justify-between gap-2">
