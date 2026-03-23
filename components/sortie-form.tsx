@@ -120,16 +120,16 @@ export function SortieForm({
                 +{qty}
               </button>
             ))}
-            <div className="mt-1 flex items-center gap-1">
-              <button type="button" onClick={() => onQuickQty(Math.max(1, parseInt(form.quantite || '1') - 1))} className="rounded border border-gray-200 px-2 py-1 text-sm hover:bg-gray-50">−</button>
-              <button type="button" onClick={() => onQuickQty(parseInt(form.quantite || '1') + 1)} className="rounded border border-gray-200 px-2 py-1 text-sm hover:bg-gray-50">+</button>
-            </div>
           </div>
           {errors.quantite ? <p className="mt-1 text-xs text-red-600">{errors.quantite}</p> : null}
+          <div className="mt-1 flex items-center gap-1">
+            <button type="button" onClick={() => onQuickQty(Math.max(1, parseInt(form.quantite || '1') - 1))} className="rounded border border-gray-200 px-2 py-1 text-sm hover:bg-gray-50">−</button>
+            <button type="button" onClick={() => onQuickQty(parseInt(form.quantite || '1') + 1)} className="rounded border border-gray-200 px-2 py-1 text-sm hover:bg-gray-50">+</button>
+          </div>
         </div>
         <div>
           <label className="mb-1 block text-sm font-medium text-gray-700">Date *</label>
-          <input type="date" value={form.date} onChange={(e) => onChange('date', e.target.value)} required className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          <input type="date" value={form.date} onChange={(e) => onChange('date', e.target.value)} required className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
           {errors.date ? <p className="mt-1 text-xs text-red-600">{errors.date}</p> : null}
         </div>
 
@@ -142,9 +142,8 @@ export function SortieForm({
 
         {/* TOGGLE AVANCÉS */}
         <div className="sm:col-span-2">
-          <button type="button" onClick={() => setShowAdvanced(!showAdvanced)} className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-800 transition-colors">
-            <span>{showAdvanced ? '▴' : '▾'}</span>
-            <span>{showAdvanced ? 'Masquer les détails avancés' : 'Afficher les détails avancés (SAP, réf, libellé…)'}</span>
+          <button type="button" onClick={() => setShowAdvanced(!showAdvanced)} className="text-xs text-gray-500 hover:text-gray-700 transition-colors">
+            {showAdvanced ? '▴ Masquer les détails' : '▾ Détails avancés'}
           </button>
         </div>
 
@@ -177,7 +176,8 @@ export function SortieForm({
         </div>
         {errors.global ? <p className="sm:col-span-2 text-sm text-red-600">{errors.global}</p> : null}
         <div className="sm:col-span-2 flex items-center gap-3 flex-wrap">
-          <button type="submit" disabled={loading} className="rounded-lg bg-blue-600 px-6 py-2 font-semibold text-white transition-colors hover:bg-blue-700 disabled:opacity-50">
+          <button type="submit" disabled={loading} aria-busy={loading} className="flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-2 font-semibold text-white transition-colors hover:bg-blue-700 disabled:opacity-50">
+            {loading && <span className="animate-spin">⏳</span>}
             {loading ? 'Enregistrement…' : 'Enregistrer'}
           </button>
           <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
@@ -185,13 +185,6 @@ export function SortieForm({
             Conserver le pneu
           </label>
           <span className="text-xs text-gray-400">Sélection recommandée via la recherche pneu, mais saisie libre toujours possible.</span>
-        </div>
-      </form>
-    </div>
-  );
-}
-
-re toujours possible.</span>
         </div>
       </form>
     </div>

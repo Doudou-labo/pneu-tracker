@@ -1,7 +1,9 @@
 'use client';
 
+import { useState } from 'react';
 import { Sortie } from '@/lib/types';
 import { formatDateFr, formatDateTimeFr } from '@/lib/formatters';
+import { DeleteDialog } from './delete-dialog';
 
 export function SortiesList({
   items,
@@ -18,6 +20,9 @@ export function SortiesList({
   onDelete: (sortie: Sortie) => void;
   onToggleFacture: (sortie: Sortie) => void;
 }) {
+  const [deleteTarget, setDeleteTarget] = useState<Sortie | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
   if (loading) {
     return <div className="rounded-xl border border-gray-200 bg-white p-8 text-center text-gray-400">Chargement de l'historique…</div>;
   }
@@ -31,7 +36,7 @@ export function SortiesList({
       <div className="mb-4 text-sm text-gray-500">{items.length} sortie(s) affichée(s) · {total} au total</div>
 
       {/* Desktop table — masqué, on utilise les cartes partout */}
-      <div className="hidden md:block overflow-x-auto">
+      <div className="hidden overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-100">
@@ -77,7 +82,7 @@ export function SortiesList({
                 </td>
                 <td className="flex gap-1 px-3 py-2.5">
                   <button onClick={() => onEdit(item)} aria-label="Modifier" className="rounded px-3 py-2 text-sm text-blue-500 transition-colors hover:bg-blue-50 hover:text-blue-700">✏️</button>
-                  <button onClick={() => onDelete(item)} aria-label="Supprimer" className="rounded px-3 py-2 text-sm text-red-500 transition-colors hover:bg-red-50 hover:text-red-700">🗑️</button>
+                  <button onClick={() => setDeleteTarget(item)} aria-label="Supprimer" className="rounded px-3 py-2 text-sm text-red-500 transition-colors hover:bg-red-50 hover:text-red-700">🗑️</button>
                 </td>
               </tr>
             ))}
@@ -86,7 +91,7 @@ export function SortiesList({
       </div>
 
       {/* Cards — vue universelle mobile + desktop */}
-      <div className="flex flex-col gap-3 md:hidden">
+      <div className="flex flex-col gap-3">
         {items.map((item) => (
           <div
             key={item.id}
@@ -116,19 +121,27 @@ export function SortiesList({
                 {item.facture_at ? '✅ Facturé' : '⬜ Non facturé'}
               </button>
               <button onClick={() => onEdit(item)} aria-label="Modifier" className="rounded border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-600 hover:bg-blue-100">✏️ Modifier</button>
-              <button onClick={() => onDelete(item)} aria-label="Supprimer" className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600 hover:bg-red-100">🗑️ Supprimer</button>
+              <button onClick={() => setDeleteTarget(item)} aria-label="Supprimer" className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600 hover:bg-red-100">🗑️ Supprimer</button>
             </div>
           </div>
         ))}
       </div>
-    </div>
-  );
-}
-r:bg-red-100">🗑️ Supprimer</button>
-            </div>
-          </div>
-        ))}
-      </div>
+
+      <DeleteDialog
+        sortie={deleteTarget}
+        loading={deleteLoading}
+        onConfirm={async () => {
+          if (!deleteTarget) return;
+          setDeleteLoading(true);
+          try {
+            await onDelete(deleteTarget);
+          } finally {
+            setDeleteLoading(false);
+            setDeleteTarget(null);
+          }
+        }}
+        onClose={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }
