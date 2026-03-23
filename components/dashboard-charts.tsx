@@ -87,38 +87,46 @@ export function DashboardCharts({ data, period, onPeriodChange }: { data: Dashbo
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
           <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-gray-600">Top marques</h3>
-          <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={data.topBrands} layout="vertical" margin={{ left: 10, right: 10 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis type="number" tick={{ fontSize: 12 }} />
-              <YAxis dataKey="label" type="category" tick={{ fontSize: 11 }} width={110} />
-              <Tooltip formatter={(v, name) => [v, name === 'quantity' ? 'Quantité' : 'Lignes']} />
-              <Bar dataKey="quantity" fill="#2563eb" radius={[0, 4, 4, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          {data.topBrands.length === 0 ? (
+            <div className="flex items-center justify-center h-[260px] text-gray-400 text-sm">Aucune donnée sur cette période</div>
+          ) : (
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={data.topBrands} layout="vertical" margin={{ left: 10, right: 10 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis type="number" tick={{ fontSize: 12 }} />
+                <YAxis dataKey="label" type="category" tick={{ fontSize: 11 }} width={110} />
+                <Tooltip formatter={(v, name) => [v, name === 'quantity' ? 'Quantité' : 'Lignes']} />
+                <Bar dataKey="quantity" fill="#2563eb" radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </div>
 
         <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
           <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-gray-600">Répartition saisons</h3>
-          <ResponsiveContainer width="100%" height={260}>
-            <PieChart>
-              <Pie
-                data={mappedSeasonStats}
-                dataKey="quantity"
-                nameKey="label"
-                cx="50%"
-                cy="50%"
-                outerRadius={80}
-                label={({ name, percent, value }: { name?: string; percent?: number; value?: number }) => (percent ?? 0) >= 0.05 ? `${name}: ${value}` : ''}
-              >
-                {mappedSeasonStats.map((entry) => (
-                  <Cell key={entry.label} fill={entry.color} />
-                ))}
-              </Pie>
-              <Tooltip formatter={(v) => [`${v} pneus`, 'Quantité']} />
-              <Legend />
-            </PieChart>
-          </ResponsiveContainer>
+          {mappedSeasonStats.length === 0 ? (
+            <div className="flex items-center justify-center h-[260px] text-gray-400 text-sm">Aucune donnée sur cette période</div>
+          ) : (
+            <ResponsiveContainer width="100%" height={260}>
+              <PieChart>
+                <Pie
+                  data={mappedSeasonStats}
+                  dataKey="quantity"
+                  nameKey="label"
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={80}
+                  label={({ name, percent, value }: { name?: string; percent?: number; value?: number }) => (percent ?? 0) >= 0.05 ? `${name}: ${value}` : ''}
+                >
+                  {mappedSeasonStats.map((entry) => (
+                    <Cell key={entry.label} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(v) => [`${v} pneus`, 'Quantité']} />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          )}
         </div>
       </div>
 
@@ -138,7 +146,9 @@ export function DashboardCharts({ data, period, onPeriodChange }: { data: Dashbo
                 {data.topSapCodes.map((item) => (
                   <tr key={item.sapCode} className="border-b border-gray-50 align-top">
                     <td className="py-2 pr-3 font-mono text-gray-900">{item.sapCode}</td>
-                    <td className="py-2 pr-3 text-xs text-gray-600">{item.description}</td>
+                    <td className="py-2 pr-3 text-xs text-gray-600" title={item.description}>
+                      {item.description.length > 40 ? item.description.slice(0, 40) + '…' : item.description}
+                    </td>
                     <td className="py-2 font-semibold text-blue-700">{item.quantity}</td>
                   </tr>
                 ))}
@@ -149,15 +159,19 @@ export function DashboardCharts({ data, period, onPeriodChange }: { data: Dashbo
 
         <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
           <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-gray-600">Répartition diamètres</h3>
-          <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={data.diameterStats}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="label" tick={{ fontSize: 12 }} />
-              <YAxis tick={{ fontSize: 12 }} />
-              <Tooltip formatter={(v) => [`${v} pneus`, 'Quantité']} />
-              <Bar dataKey="quantity" fill="#10b981" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          {data.diameterStats.length === 0 ? (
+            <div className="flex items-center justify-center h-[260px] text-gray-400 text-sm">Aucune donnée sur cette période</div>
+          ) : (
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={data.diameterStats}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis dataKey="label" tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} />
+                <Tooltip formatter={(v) => [`${v} pneus`, 'Quantité']} />
+                <Bar dataKey="quantity" fill="#10b981" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </div>
       </div>
     </div>

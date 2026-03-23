@@ -48,6 +48,11 @@ export function EditSortieDialog({
             <label className="mb-1 block text-sm font-medium text-gray-700">Immatriculation *</label>
             <input type="text" value={form.immatriculation} onChange={(e) => onChange('immatriculation', e.target.value)} required className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm uppercase focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
+          {(form.description || form.manufacturer_ref) ? (
+            <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-2 text-sm text-emerald-800">
+              ✅ Pneu chargé — {form.description || form.manufacturer_ref}
+            </div>
+          ) : null}
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">Code SAP</label>
             <input type="text" value={form.code_sap} onChange={(e) => onChange('code_sap', e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
