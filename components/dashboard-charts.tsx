@@ -1,18 +1,36 @@
 'use client';
 
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, CartesianGrid } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, CartesianGrid, Legend } from 'recharts';
 
 const COLORS = ['#2563eb', '#10b981', '#8b5cf6', '#f59e0b', '#ef4444', '#06b6d4'];
+
+const SEASON_MAP: Record<string, { label: string; color: string }> = {
+  'SUMMER': { label: 'Été', color: '#f59e0b' },
+  'WINTER': { label: 'Hiver', color: '#3b82f6' },
+  'ALL SEASON': { label: '4 Saisons', color: '#10b981' },
+  'N/A': { label: 'Non renseigné', color: '#d1d5db' },
+};
 
 type DashboardData = {
   summary: { totalLines: number; totalQuantity: number; distinctRefs: number; topBrand: string };
   topBrands: Array<{ label: string; lines: number; quantity: number }>;
   seasonStats: Array<{ label: string; lines: number; quantity: number }>;
-  topSapCodes: Array<{ sapCode: string; description: string; brand: string; lines: number; quantity: number }>;
+  topSapCodes: Array<{ sapCode: string; manufacturer_ref: string; brand: string; diameter: string; search_label: string; lines: number; quantity: number }>;
   diameterStats: Array<{ label: string; lines: number; quantity: number }>;
 };
 
+const renderSeasonLabel = ({ entry, percent }: { entry: { label: string; quantity: number }; percent: number }) => {
+  if (percent < 0.05) return null;
+  return `${entry.label}: ${entry.quantity}`;
+};
+
 export function DashboardCharts({ data }: { data: DashboardData }) {
+  const mappedSeasonStats = data.seasonStats.map(s => ({
+    ...s,
+    label: SEASON_MAP[s.label]?.label ?? s.label,
+    color: SEASON_MAP[s.label]?.color ?? '#9ca3af',
+  }));
+
   return (
     <div className="flex flex-col gap-6">
       <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
@@ -56,12 +74,21 @@ export function DashboardCharts({ data }: { data: DashboardData }) {
           <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-gray-600">Répartition saisons</h3>
           <ResponsiveContainer width="100%" height={260}>
             <PieChart>
-              <Pie data={data.seasonStats} dataKey="quantity" nameKey="label" cx="50%" cy="50%" outerRadius={90} label>
-                {data.seasonStats.map((entry, index) => (
-                  <Cell key={entry.label} fill={COLORS[index % COLORS.length]} />
+              <Pie
+                data={mappedSeasonStats}
+                dataKey="quantity"
+                nameKey="label"
+                cx="50%"
+                cy="50%"
+                outerRadius={80}
+                label={({ name, percent, value }) => percent >= 0.05 ? `${name}: ${value}` : ''}
+              >
+                {mappedSeasonStats.map((entry) => (
+                  <Cell key={entry.label} fill={entry.color} />
                 ))}
               </Pie>
               <Tooltip formatter={(v) => [`${v} pneus`, 'Quantité']} />
+              <Legend />
             </PieChart>
           </ResponsiveContainer>
         </div>
@@ -75,7 +102,8 @@ export function DashboardCharts({ data }: { data: DashboardData }) {
               <thead>
                 <tr className="border-b border-gray-100 text-left text-gray-500">
                   <th className="py-2">SAP</th>
-                  <th className="py-2">Marque</th>
+                  <th className="py-2">Référence</th>
+                  <th className="py-2">Dim.</th>
                   <th className="py-2">Qté</th>
                 </tr>
               </thead>
@@ -83,7 +111,8 @@ export function DashboardCharts({ data }: { data: DashboardData }) {
                 {data.topSapCodes.map((item) => (
                   <tr key={item.sapCode} className="border-b border-gray-50 align-top">
                     <td className="py-2 pr-3 font-mono text-gray-900">{item.sapCode}</td>
-                    <td className="py-2 pr-3 text-gray-600">{item.brand}</td>
+                    <td className="py-2 pr-3 text-xs text-gray-600">{item.manufacturer_ref}</td>
+                    <td className="py-2 pr-3 text-gray-600">{item.diameter}</td>
                     <td className="py-2 font-semibold text-blue-700">{item.quantity}</td>
                   </tr>
                 ))}
