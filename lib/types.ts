@@ -50,6 +50,7 @@ export interface DashboardPayload {
   seasonStats: Array<{ label: string; lines: number; quantity: number }>;
   topSapCodes: Array<{ sapCode: string; description: string; lines: number; quantity: number }>;
   diameterStats: Array<{ label: string; lines: number; quantity: number }>;
+  trend: Array<{ label: string; lines: number; quantity: number }>;
 }
 
 export type SortieInput = {

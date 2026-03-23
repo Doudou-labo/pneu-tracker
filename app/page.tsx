@@ -82,7 +82,7 @@ export default function Home() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { toasts, toast: addToast } = useToast();
-  const { dashboard, refreshDashboard } = useDashboard();
+  const { dashboard, refreshDashboard, period, handlePeriodChange } = useDashboard();
   const { auditLogs, refreshAudit } = useAudit();
 
   const {
@@ -399,7 +399,7 @@ export default function Home() {
         !dashboard || dashboard.summary.totalLines === 0 ? (
           <div className="rounded-xl border border-gray-200 bg-white p-12 text-center text-gray-400">Aucune donnée à afficher</div>
         ) : (
-          <DashboardCharts data={dashboard} />
+          <DashboardCharts data={dashboard} period={period} onPeriodChange={handlePeriodChange} />
         )
       ) : null}
 

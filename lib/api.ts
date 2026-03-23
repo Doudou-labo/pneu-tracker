@@ -49,8 +49,9 @@ export async function fetchTyreSuggestions(q: string, limit = 8) {
   return request<{ items: TyreCatalogItem[] }>(`/api/tyres/suggest?q=${encodeURIComponent(q)}&limit=${limit}`);
 }
 
-export async function fetchDashboard() {
-  return request<DashboardPayload>('/api/dashboard');
+export async function fetchDashboard(period?: string) {
+  const qs = period ? `?period=${period}` : '';
+  return request<DashboardPayload>(`/api/dashboard${qs}`);
 }
 
 export async function createSortie(input: SortieInput) {

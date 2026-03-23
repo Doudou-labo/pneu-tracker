@@ -17,14 +17,10 @@ type DashboardData = {
   seasonStats: Array<{ label: string; lines: number; quantity: number }>;
   topSapCodes: Array<{ sapCode: string; description: string; lines: number; quantity: number }>;
   diameterStats: Array<{ label: string; lines: number; quantity: number }>;
+  trend: Array<{ label: string; lines: number; quantity: number }>;
 };
 
-const renderSeasonLabel = ({ entry, percent }: { entry: { label: string; quantity: number }; percent: number }) => {
-  if (percent < 0.05) return null;
-  return `${entry.label}: ${entry.quantity}`;
-};
-
-export function DashboardCharts({ data }: { data: DashboardData }) {
+export function DashboardCharts({ data, period, onPeriodChange }: { data: DashboardData; period: string; onPeriodChange: (p: string) => void }) {
   const mappedSeasonStats = data.seasonStats.map(s => ({
     ...s,
     label: SEASON_MAP[s.label]?.label ?? s.label,
@@ -33,6 +29,23 @@ export function DashboardCharts({ data }: { data: DashboardData }) {
 
   return (
     <div className="flex flex-col gap-6">
+      <div className="flex gap-2 mb-2">
+        {[
+          { key: 'today', label: "Aujourd'hui" },
+          { key: 'week', label: 'Cette semaine' },
+          { key: 'month', label: 'Ce mois' },
+          { key: 'all', label: 'Tout' },
+        ].map(({ key, label }) => (
+          <button
+            key={key}
+            onClick={() => onPeriodChange(key)}
+            className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${period === key ? 'bg-blue-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
       <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
         <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 shadow-sm">
           <div className="text-xs font-semibold uppercase tracking-wide text-blue-600">Sorties</div>
@@ -55,6 +68,21 @@ export function DashboardCharts({ data }: { data: DashboardData }) {
           <div className="text-sm text-orange-700">la plus sortie</div>
         </div>
       </div>
+
+      {data.trend && data.trend.length > 0 && (
+        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+          <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-gray-600">Tendance 30 jours</h3>
+          <ResponsiveContainer width="100%" height={180}>
+            <BarChart data={data.trend}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <XAxis dataKey="label" tick={{ fontSize: 10 }} tickFormatter={(v: string) => v.slice(5)} />
+              <YAxis tick={{ fontSize: 12 }} />
+              <Tooltip formatter={(v) => [`${v} pneus`, 'Quantité']} labelFormatter={(l) => `Date: ${l}`} />
+              <Bar dataKey="quantity" fill="#2563eb" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
