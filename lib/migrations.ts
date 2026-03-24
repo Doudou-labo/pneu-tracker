@@ -166,6 +166,14 @@ const migrations: Migration[] = [
       CREATE UNIQUE INDEX IF NOT EXISTS idx_inversions_unique_sortie_active ON inversions(sortie_id) WHERE deleted_at IS NULL;
     `,
   },
+  {
+    version: 11,
+    description: 'Add done_at column to inversions for processing tracking',
+    sql: `
+      ALTER TABLE inversions ADD COLUMN done_at TEXT;
+      CREATE INDEX IF NOT EXISTS idx_inversions_done_at ON inversions(done_at);
+    `,
+  },
 ];
 
 export function runMigrations(db: Database.Database): void {

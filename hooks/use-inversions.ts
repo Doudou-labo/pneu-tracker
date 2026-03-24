@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { createInversion, fetchInversions, InversionsFilters } from '@/lib/api';
+import { createInversion, fetchInversions, InversionsFilters, toggleInversionDone, updateInversion } from '@/lib/api';
 import { Inversion, InversionInput } from '@/lib/types';
 
 const defaultFilters: InversionsFilters = {
@@ -52,6 +52,25 @@ export function useInversions() {
     }
   }, [filters.limit]);
 
+  const update = useCallback(async (id: number, input: InversionInput) => {
+    setSaving(true);
+    try {
+      const updated = await updateInversion(id, input);
+      setItems((current) => current.map((item) => item.id === id ? updated : item));
+      setLastSaved(new Date().toISOString());
+      return updated;
+    } finally {
+      setSaving(false);
+    }
+  }, []);
+
+  const markDone = useCallback(async (id: number) => {
+    const updated = await toggleInversionDone(id);
+    setItems((current) => current.map((item) => item.id === id ? updated : item));
+    setLastSaved(new Date().toISOString());
+    return updated;
+  }, []);
+
   const hasPrev = filters.offset > 0;
   const hasNext = filters.offset + filters.limit < total;
   const pageStart = total === 0 ? 0 : filters.offset + 1;
@@ -68,6 +87,8 @@ export function useInversions() {
     lastSaved,
     load,
     create,
+    update,
+    markDone,
     hasPrev,
     hasNext,
     pageStart,

@@ -87,3 +87,11 @@ export async function importSorties(rows: SortieInput[]) {
 export async function createInversion(input: InversionInput) {
   return request<Inversion>('/api/inversions', { method: 'POST', body: JSON.stringify(input) });
 }
+
+export async function updateInversion(id: number, input: InversionInput) {
+  return request<Inversion>(`/api/inversions/${id}`, { method: 'PUT', body: JSON.stringify(input) });
+}
+
+export async function toggleInversionDone(id: number) {
+  return request<Inversion>(`/api/inversions/${id}/done`, { method: 'PATCH' });
+}

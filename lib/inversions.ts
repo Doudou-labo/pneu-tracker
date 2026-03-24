@@ -93,6 +93,7 @@ export const inversionSelect = `
     i.billed_description,
     i.billed_tyre_catalog_id,
     i.facture_reference,
+    i.done_at,
     i.created_at,
     i.updated_at,
     i.deleted_at

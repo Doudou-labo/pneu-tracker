@@ -12,7 +12,7 @@ import { DeleteDialog } from '@/components/delete-dialog';
 import { PaginationControls } from '@/components/pagination-controls';
 import { AuditLogPanel } from '@/components/audit-log-panel';
 import { ToastViewport } from '@/components/toast-viewport';
-import { InversionForm, buildInversionPrefill, InversionFormState, toInversionPayload } from '@/components/inversion-form';
+import { InversionForm, buildInversionEditPrefill, buildInversionPrefill, InversionFormState, toInversionPayload } from '@/components/inversion-form';
 import { InversionsList } from '@/components/inversions-list';
 import { useSorties } from '@/hooks/use-sorties';
 import { useInversions } from '@/hooks/use-inversions';
@@ -21,7 +21,7 @@ import { useDashboard } from '@/hooks/use-dashboard';
 import { useAudit } from '@/hooks/use-audit';
 import { buildCsv, parseCsvLine } from '@/lib/csv';
 import { formatDateFr, formatDateTimeFr } from '@/lib/formatters';
-import { FactureFilter, Sortie, SortieInput, TyreCatalogItem } from '@/lib/types';
+import { FactureFilter, Inversion, Sortie, SortieInput, TyreCatalogItem } from '@/lib/types';
 import { normalizeImmatriculation } from '@/lib/validators';
 
 type Tab = 'form' | 'history' | 'inversions' | 'dashboard';
@@ -116,6 +116,7 @@ export default function Home() {
   const [inversionForm, setInversionForm] = useState<InversionFormState>(defaultInversionForm());
   const [inversionErrors, setInversionErrors] = useState<Record<string, string>>({});
   const [inversionSource, setInversionSource] = useState<Sortie | null>(null);
+  const [editingInversion, setEditingInversion] = useState<Inversion | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { toasts, toast: addToast } = useToast();
@@ -288,8 +289,8 @@ export default function Home() {
 
   const handleExportInversionsCsv = () => {
     const csv = buildCsv([
-      ['Date', 'Immatriculation', 'Quantité', 'Réf montée', 'Réf facturée', 'Facture'],
-      ...inversions.items.map((item) => [formatDateFr(item.date), item.immatriculation, item.quantite, item.mounted_manufacturer_ref || item.mounted_code_sap || '', item.billed_manufacturer_ref || item.billed_code_sap || '', item.facture_reference || '']),
+      ['Date', 'Immatriculation', 'Quantité', 'SAP monté', 'Description montée', 'SAP facturé', 'Description facturée', 'Facture', 'Inversion faite'],
+      ...inversions.items.map((item) => [formatDateFr(item.date), item.immatriculation, item.quantite, item.mounted_code_sap || '', item.mounted_description || '', item.billed_code_sap || '', item.billed_description || '', item.facture_reference || '', item.done_at ? 'Oui' : 'Non']),
     ]);
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -343,10 +344,26 @@ export default function Home() {
   };
 
   const handleOpenInversion = (sortie: Sortie) => {
+    setEditingInversion(null);
     setInversionSource(sortie);
     setInversionForm(buildInversionPrefill(sortie));
     setInversionErrors({});
     setTab('inversions');
+  };
+
+  const handleEditInversion = (inversion: Inversion) => {
+    setEditingInversion(inversion);
+    setInversionSource(null);
+    setInversionForm(buildInversionEditPrefill(inversion));
+    setInversionErrors({});
+    setTab('inversions');
+  };
+
+  const handleCancelInversionEdit = () => {
+    setEditingInversion(null);
+    setInversionSource(null);
+    setInversionForm(defaultInversionForm());
+    setInversionErrors({});
   };
 
   const handleInversionChange = (key: keyof InversionFormState, value: string) => {
@@ -365,15 +382,35 @@ export default function Home() {
   const handleCreateInversion = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      if (editingInversion) {
+        const updated = await inversions.update(editingInversion.id, toInversionPayload(inversionForm));
+        setEditingInversion(null);
+        setInversionSource(null);
+        setInversionForm(defaultInversionForm());
+        void refreshAudit();
+        addToast('success', `✏️ Inversion modifiée : ${updated.immatriculation} · ${updated.quantite} pneus`);
+        return;
+      }
+
       const created = await inversions.create(toInversionPayload(inversionForm));
       setInversionSource(null);
       setInversionForm(defaultInversionForm());
       void refreshAudit();
       addToast('success', `↔️ Inversion enregistrée : ${created.immatriculation} · ${created.quantite} pneus`);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Erreur lors de la création de l’inversion';
+      const message = error instanceof Error ? error.message : editingInversion ? 'Erreur lors de la modification de l’inversion' : 'Erreur lors de la création de l’inversion';
       setInversionErrors({ global: message });
       addToast('error', message);
+    }
+  };
+
+  const handleToggleInversionDone = async (inversion: Inversion) => {
+    try {
+      const updated = await inversions.markDone(inversion.id);
+      void refreshAudit();
+      addToast('success', updated.done_at ? `✅ Inversion marquée comme faite : ${updated.immatriculation}` : `↩️ Marquage retiré : ${updated.immatriculation}`);
+    } catch (error) {
+      addToast('error', error instanceof Error ? error.message : 'Erreur lors du marquage');
     }
   };
 
@@ -421,7 +458,7 @@ export default function Home() {
 
       {tab === 'inversions' && (
         <div className="flex flex-col gap-4">
-          <InversionForm form={inversionForm} errors={inversionErrors} loading={inversions.saving} sourceSortieLabel={inversionSource ? `${inversionSource.immatriculation} · ${formatDateFr(inversionSource.date)}` : null} onChange={handleInversionChange} onSubmit={handleCreateInversion} onBilledTyreSearchChange={handleInversionTyreSearchChange} onBilledTyreSelect={handleInversionTyreSelect} />
+          <InversionForm form={inversionForm} errors={inversionErrors} loading={inversions.saving} sourceSortieLabel={editingInversion ? `Inversion #${editingInversion.id}` : inversionSource ? `${inversionSource.immatriculation} · ${formatDateFr(inversionSource.date)}` : null} mode={editingInversion ? 'edit' : 'create'} onCancel={editingInversion ? handleCancelInversionEdit : undefined} onChange={handleInversionChange} onSubmit={handleCreateInversion} onBilledTyreSearchChange={handleInversionTyreSearchChange} onBilledTyreSelect={handleInversionTyreSelect} />
           <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
             <div className="flex flex-col gap-3">
               <FiltersBar search={inversions.filters.search} immatriculation={inversions.filters.immatriculation} dateFrom={inversions.filters.dateFrom} dateTo={inversions.filters.dateTo} facture={(inversions.filters.facture as FactureFilter) || 'all'} uniqueImmats={inversions.uniqueImmats} nonFactureCount={inversions.filters.facture === 'all' ? inversions.items.filter((item) => !item.facture_reference).length : 0} onChange={(key, value) => inversions.setFilters((current) => ({ ...current, [key]: value, offset: 0 }))} onReset={inversions.resetFilters} onSearchSelect={(item) => inversions.setFilters((current) => ({ ...current, search: getTyreSearchValue(item), offset: 0 }))} />
@@ -434,7 +471,7 @@ export default function Home() {
               </div>
             </div>
           </div>
-          <InversionsList items={inversions.items} total={inversions.total} loading={inversions.loading} />
+          <InversionsList items={inversions.items} total={inversions.total} loading={inversions.loading} onEdit={handleEditInversion} onToggleDone={handleToggleInversionDone} />
           <PaginationControls pageStart={inversions.pageStart} pageEnd={inversions.pageEnd} total={inversions.total} hasPrev={inversions.hasPrev} hasNext={inversions.hasNext} onPrev={inversions.prevPage} onNext={inversions.nextPage} />
         </div>
       )}

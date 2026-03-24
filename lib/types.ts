@@ -31,6 +31,7 @@ export interface Inversion {
   billed_description: string | null;
   billed_tyre_catalog_id: number | null;
   facture_reference: string | null;
+  done_at: string | null;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;

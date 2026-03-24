@@ -1,6 +1,6 @@
 'use client';
 
-import { InversionInput, Sortie, TyreCatalogItem } from '@/lib/types';
+import { Inversion, InversionInput, Sortie, TyreCatalogItem } from '@/lib/types';
 import { TyreAutocomplete } from './tyre-autocomplete';
 
 export type InversionFormState = {
@@ -43,6 +43,27 @@ export function buildInversionPrefill(sortie: Sortie): InversionFormState {
   };
 }
 
+export function buildInversionEditPrefill(inversion: Inversion): InversionFormState {
+  return {
+    sortie_id: String(inversion.sortie_id),
+    date: inversion.date,
+    immatriculation: inversion.immatriculation,
+    quantite: String(inversion.quantite),
+    mounted_code_sap: inversion.mounted_code_sap || '',
+    mounted_manufacturer_ref: inversion.mounted_manufacturer_ref || '',
+    mounted_search_label: inversion.mounted_search_label || '',
+    mounted_description: inversion.mounted_description || '',
+    mounted_tyre_catalog_id: inversion.mounted_tyre_catalog_id ? String(inversion.mounted_tyre_catalog_id) : '',
+    billed_code_sap: inversion.billed_code_sap || '',
+    billed_manufacturer_ref: inversion.billed_manufacturer_ref || '',
+    billed_search_label: inversion.billed_search_label || '',
+    billed_description: inversion.billed_description || '',
+    billed_tyre_catalog_id: inversion.billed_tyre_catalog_id ? String(inversion.billed_tyre_catalog_id) : '',
+    billed_tyre_search: inversion.billed_code_sap || inversion.billed_manufacturer_ref || inversion.billed_search_label || inversion.billed_description || '',
+    facture_reference: inversion.facture_reference || '',
+  };
+}
+
 export function toInversionPayload(form: InversionFormState): InversionInput {
   return {
     sortie_id: Number(form.sortie_id),
@@ -68,6 +89,8 @@ export function InversionForm({
   errors,
   loading,
   sourceSortieLabel,
+  mode = 'create',
+  onCancel,
   onChange,
   onSubmit,
   onBilledTyreSearchChange,
@@ -77,6 +100,8 @@ export function InversionForm({
   errors: Partial<Record<keyof InversionInput | 'global', string>>;
   loading: boolean;
   sourceSortieLabel?: string | null;
+  mode?: 'create' | 'edit';
+  onCancel?: () => void;
   onChange: (key: keyof InversionFormState, value: string) => void;
   onSubmit: (e: React.FormEvent) => void;
   onBilledTyreSearchChange: (value: string) => void;
@@ -86,7 +111,7 @@ export function InversionForm({
     <div className="rounded-xl border border-amber-200 bg-white p-6 shadow-sm">
       <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-gray-800">↔️ Nouvelle inversion</h2>
+          <h2 className="text-lg font-semibold text-gray-800">{mode === 'edit' ? '✏️ Modifier l’inversion' : '↔️ Nouvelle inversion'}</h2>
           <p className="text-sm text-gray-500">La sortie d'origine fixe l'immatriculation et la quantité. Tu ne saisis que la référence facturée.</p>
         </div>
         {sourceSortieLabel ? <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">Depuis : {sourceSortieLabel}</span> : null}
@@ -152,8 +177,9 @@ export function InversionForm({
         {errors.global ? <p className="sm:col-span-2 text-sm text-red-600">{errors.global}</p> : null}
         <div className="sm:col-span-2 flex items-center gap-3">
           <button type="submit" disabled={loading || !form.sortie_id} className="rounded-lg bg-amber-600 px-6 py-2 font-semibold text-white transition-colors hover:bg-amber-700 disabled:opacity-50">
-            {loading ? 'Enregistrement…' : 'Enregistrer l’inversion'}
+            {loading ? 'Enregistrement…' : mode === 'edit' ? 'Enregistrer les modifications' : 'Enregistrer l’inversion'}
           </button>
+          {onCancel ? <button type="button" onClick={onCancel} className="rounded-lg bg-gray-100 px-4 py-2 font-semibold text-gray-700 transition-colors hover:bg-gray-200">Annuler</button> : null}
           <span className="text-xs text-gray-400">Quantité et immatriculation verrouillées depuis la sortie.</span>
         </div>
       </form>
