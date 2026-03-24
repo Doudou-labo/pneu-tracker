@@ -12,6 +12,7 @@ export function SortiesList({
   onEdit,
   onDelete,
   onToggleFacture,
+  onCreateInversion,
 }: {
   items: Sortie[];
   total: number;
@@ -19,6 +20,7 @@ export function SortiesList({
   onEdit: (sortie: Sortie) => void;
   onDelete: (sortie: Sortie) => void;
   onToggleFacture: (sortie: Sortie) => void;
+  onCreateInversion: (sortie: Sortie) => void;
 }) {
   const [deleteTarget, setDeleteTarget] = useState<Sortie | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -34,69 +36,9 @@ export function SortiesList({
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
       <div className="mb-4 text-sm text-gray-500">{items.length} sortie(s) affichée(s) · {total} au total</div>
-
-      {/* Desktop table — masqué, on utilise les cartes partout */}
-      <div className="hidden overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-gray-100">
-              <th className="w-8 px-2 py-2" title="Facturé">💶</th>
-              <th className="px-3 py-2 text-left font-medium text-gray-500">Date</th>
-              <th className="px-3 py-2 text-left font-medium text-gray-500 whitespace-nowrap">Immat.</th>
-              <th className="px-3 py-2 text-left font-medium text-gray-500">Code SAP</th>
-              <th className="px-3 py-2 text-left font-medium text-gray-500">Réf fabricant</th>
-              <th className="px-3 py-2 text-left font-medium text-gray-500">Libellé</th>
-              <th className="px-3 py-2 text-left font-medium text-gray-500">Qté</th>
-              <th className="px-3 py-2 text-left font-medium text-gray-500">Description</th>
-              <th className="px-3 py-2 text-left font-medium text-gray-500">Maj</th>
-              <th className="px-3 py-2" />
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((item) => (
-              <tr
-                key={item.id}
-                className={`border-b border-gray-50 transition-colors hover:bg-gray-50 ${item.facture_at ? 'opacity-60 bg-green-50' : ''}`}
-              >
-                <td className="px-2 py-2.5 text-center">
-                  <button
-                    onClick={() => onToggleFacture(item)}
-                    title={item.facture_at ? `Facturé le ${formatDateTimeFr(item.facture_at)} — cliquer pour retirer` : 'Marquer comme facturé'}
-                    className="text-lg leading-none transition-transform hover:scale-110 focus:outline-none"
-                  >
-                    {item.facture_at ? '✅' : '⬜'}
-                  </button>
-                </td>
-                <td className="whitespace-nowrap px-3 py-2.5 text-gray-700">{formatDateFr(item.date)}</td>
-                <td className="px-3 py-2.5 font-mono font-medium text-gray-900 whitespace-nowrap">{item.immatriculation}</td>
-                <td className="px-3 py-2.5 text-gray-500">{item.code_sap || '—'}</td>
-                <td className="px-3 py-2.5 text-gray-500">{item.manufacturer_ref || '—'}</td>
-                <td className="max-w-[160px] truncate px-3 py-2.5 text-gray-500">{item.search_label || '—'}</td>
-                <td className="px-3 py-2.5 text-center font-semibold text-blue-700">{item.quantite}</td>
-                <td className="max-w-xs truncate px-3 py-2.5 text-gray-600">{item.description || '—'}</td>
-                <td className="whitespace-nowrap px-3 py-2.5 text-xs text-gray-400">
-                  {formatDateTimeFr(item.updated_at || item.created_at)}
-                  {item.facture_at && (
-                    <div className="text-green-600 font-medium">Fact. {formatDateTimeFr(item.facture_at)}</div>
-                  )}
-                </td>
-                <td className="flex gap-1 px-3 py-2.5">
-                  <button onClick={() => onEdit(item)} aria-label="Modifier" className="rounded px-3 py-2 text-sm text-[#144390] transition-colors hover:bg-blue-50 hover:text-blue-700">✏️</button>
-                  <button onClick={() => setDeleteTarget(item)} aria-label="Supprimer" className="rounded px-3 py-2 text-sm text-red-500 transition-colors hover:bg-red-50 hover:text-red-700">🗑️</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Cards — vue universelle mobile + desktop */}
       <div className="flex flex-col gap-3">
         {items.map((item) => (
-          <div
-            key={item.id}
-            className={`rounded-lg border border-gray-200 p-4 ${item.facture_at ? 'bg-green-50 opacity-70' : 'bg-gray-50'}`}
-          >
+          <div key={item.id} className={`rounded-lg border border-gray-200 p-4 ${item.facture_at ? 'bg-green-50 opacity-70' : 'bg-gray-50'}`}>
             <div className="flex items-start justify-between gap-3">
               <div>
                 <span className="font-mono font-bold text-gray-900">{item.immatriculation}</span>
@@ -112,7 +54,7 @@ export function SortiesList({
               <p className="mt-1 text-xs font-medium text-green-700">✅ Facturé le {formatDateTimeFr(item.facture_at)}</p>
             )}
             <p className="mt-2 text-xs text-gray-400">Mise à jour : {formatDateTimeFr(item.updated_at || item.created_at)}</p>
-            <div className="mt-3 flex gap-2">
+            <div className="mt-3 flex flex-wrap gap-2">
               <button
                 onClick={() => onToggleFacture(item)}
                 aria-label={item.facture_at ? `Retirer le statut facturé pour ${item.immatriculation}` : `Marquer comme facturé pour ${item.immatriculation}`}
@@ -120,6 +62,7 @@ export function SortiesList({
               >
                 {item.facture_at ? '✅ Facturé' : '⬜ Non facturé'}
               </button>
+              <button onClick={() => onCreateInversion(item)} className="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700 hover:bg-amber-100">↔️ Inversion</button>
               <button onClick={() => onEdit(item)} aria-label="Modifier" className="rounded border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-600 hover:bg-blue-100">✏️ Modifier</button>
               <button onClick={() => setDeleteTarget(item)} aria-label="Supprimer" className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600 hover:bg-red-100">🗑️ Supprimer</button>
             </div>

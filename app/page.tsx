@@ -12,7 +12,10 @@ import { DeleteDialog } from '@/components/delete-dialog';
 import { PaginationControls } from '@/components/pagination-controls';
 import { AuditLogPanel } from '@/components/audit-log-panel';
 import { ToastViewport } from '@/components/toast-viewport';
+import { InversionForm, buildInversionPrefill, InversionFormState, toInversionPayload } from '@/components/inversion-form';
+import { InversionsList } from '@/components/inversions-list';
 import { useSorties } from '@/hooks/use-sorties';
+import { useInversions } from '@/hooks/use-inversions';
 import { useToast } from '@/hooks/use-toast';
 import { useDashboard } from '@/hooks/use-dashboard';
 import { useAudit } from '@/hooks/use-audit';
@@ -21,7 +24,7 @@ import { formatDateFr, formatDateTimeFr } from '@/lib/formatters';
 import { FactureFilter, Sortie, SortieInput, TyreCatalogItem } from '@/lib/types';
 import { normalizeImmatriculation } from '@/lib/validators';
 
-type Tab = 'form' | 'history' | 'dashboard';
+type Tab = 'form' | 'history' | 'inversions' | 'dashboard';
 type FormState = {
   date: string;
   immatriculation: string;
@@ -44,6 +47,25 @@ const defaultForm = (): FormState => ({
   tyre_catalog_id: '',
   quantite: '',
   description: '',
+});
+
+const defaultInversionForm = (): InversionFormState => ({
+  sortie_id: '',
+  date: new Date().toISOString().split('T')[0],
+  immatriculation: '',
+  quantite: '',
+  mounted_code_sap: '',
+  mounted_manufacturer_ref: '',
+  mounted_search_label: '',
+  mounted_description: '',
+  mounted_tyre_catalog_id: '',
+  billed_code_sap: '',
+  billed_manufacturer_ref: '',
+  billed_search_label: '',
+  billed_description: '',
+  billed_tyre_catalog_id: '',
+  billed_tyre_search: '',
+  facture_reference: '',
 });
 
 function validateClientForm(form: FormState) {
@@ -91,11 +113,15 @@ export default function Home() {
   const [deletingSortie, setDeletingSortie] = useState<Sortie | null>(null);
   const [selectedTyre, setSelectedTyre] = useState<TyreCatalogItem | null>(null);
   const [lastSortie, setLastSortie] = useState<Sortie | null>(null);
+  const [inversionForm, setInversionForm] = useState<InversionFormState>(defaultInversionForm());
+  const [inversionErrors, setInversionErrors] = useState<Record<string, string>>({});
+  const [inversionSource, setInversionSource] = useState<Sortie | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { toasts, toast: addToast } = useToast();
   const { dashboard, refreshDashboard, period, handlePeriodChange } = useDashboard();
   const { auditLogs, refreshAudit } = useAudit();
+  const inversions = useInversions();
 
   const {
     items,
@@ -130,7 +156,6 @@ export default function Home() {
   const totalPneus = useMemo(() => items.reduce((acc, item) => acc + item.quantite, 0), [items]);
   const thisMonth = new Date().toISOString().slice(0, 7);
   const thisMonthQty = useMemo(() => items.filter((item) => item.date.startsWith(thisMonth)).reduce((acc, item) => acc + item.quantite, 0), [items, thisMonth]);
-
   const recentHint = items[0] ? `${items[0].immatriculation} · ${items[0].quantite} pneus` : undefined;
 
   const handleFormChange = (key: string, value: string) => {
@@ -175,24 +200,13 @@ export default function Home() {
     try {
       const created = await create(toPayload(form));
       setLastSortie(created);
-
       const keepTyre = typeof window !== 'undefined' && localStorage.getItem('pneu-tracker-keep-tyre') === 'true';
       if (keepTyre && selectedTyre) {
-        const kept = {
-          ...defaultForm(),
-          tyre_search: getTyreSearchValue(selectedTyre),
-          tyre_catalog_id: String(selectedTyre.id),
-          code_sap: selectedTyre.sap_code || '',
-          manufacturer_ref: selectedTyre.manufacturer_ref || '',
-          search_label: selectedTyre.search_label || '',
-          description: selectedTyre.description || '',
-        };
-        setForm(kept);
+        setForm({ ...defaultForm(), tyre_search: getTyreSearchValue(selectedTyre), tyre_catalog_id: String(selectedTyre.id), code_sap: selectedTyre.sap_code || '', manufacturer_ref: selectedTyre.manufacturer_ref || '', search_label: selectedTyre.search_label || '', description: selectedTyre.description || '' });
       } else {
         setForm(defaultForm());
         setSelectedTyre(null);
       }
-
       void refreshAudit();
       void refreshDashboard();
       addToast('success', `✅ Sortie enregistrée : ${created.immatriculation} · ${created.quantite} pneus`);
@@ -217,13 +231,8 @@ export default function Home() {
     });
   };
 
-  const handleEditChange = (key: string, value: string) => {
-    setEditForm((current) => ({ ...current, [key]: key === 'immatriculation' ? value.toUpperCase() : value }));
-  };
-
-  const handleEditTyreSearchChange = (value: string) => {
-    setEditForm((current) => clearTyreSelection(current, value));
-  };
+  const handleEditChange = (key: string, value: string) => setEditForm((current) => ({ ...current, [key]: key === 'immatriculation' ? value.toUpperCase() : value }));
+  const handleEditTyreSearchChange = (value: string) => setEditForm((current) => clearTyreSelection(current, value));
 
   const handleEdit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -242,8 +251,7 @@ export default function Home() {
   const handleToggleFacture = async (sortie: Sortie) => {
     try {
       await markFacture(sortie.id);
-      const wasFacture = Boolean(sortie.facture_at);
-      addToast('success', wasFacture ? `↩️ Marquage facturé retiré : ${sortie.immatriculation}` : `✅ Sortie marquée comme facturée : ${sortie.immatriculation}`);
+      addToast('success', sortie.facture_at ? `↩️ Marquage facturé retiré : ${sortie.immatriculation}` : `✅ Sortie marquée comme facturée : ${sortie.immatriculation}`);
     } catch (error) {
       addToast('error', error instanceof Error ? error.message : 'Erreur lors du marquage');
     }
@@ -274,12 +282,23 @@ export default function Home() {
     a.download = `sorties-pneus-${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    void fetch('/api/audit/export', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ total, offset: filters.offset, limit: filters.limit, search: filters.search }),
-    }).then(() => refreshAudit()).catch(() => undefined);
+    void fetch('/api/audit/export', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ total, offset: filters.offset, limit: filters.limit, search: filters.search }) }).then(() => refreshAudit()).catch(() => undefined);
     addToast('info', '📤 Export CSV généré (compatible Excel)');
+  };
+
+  const handleExportInversionsCsv = () => {
+    const csv = buildCsv([
+      ['Date', 'Immatriculation', 'Quantité', 'Réf montée', 'Réf facturée', 'Facture'],
+      ...inversions.items.map((item) => [formatDateFr(item.date), item.immatriculation, item.quantite, item.mounted_manufacturer_ref || item.mounted_code_sap || '', item.billed_manufacturer_ref || item.billed_code_sap || '', item.facture_reference || '']),
+    ]);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `inversions-pneus-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    addToast('info', '📤 Export CSV des inversions généré');
   };
 
   const handleImportCsv = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -289,14 +308,12 @@ export default function Home() {
       addToast('error', 'Le fichier dépasse 1 Mo');
       return;
     }
-
     const reader = new FileReader();
     reader.onload = async (event) => {
       try {
         const text = String(event.target?.result || '').replace(/^\uFEFF/, '');
         const lines = text.split(/\r?\n/).filter(Boolean);
         if (lines.length < 2) throw new Error('CSV vide ou invalide');
-
         const headers = parseCsvLine(lines[0]).map((item) => item.toLowerCase());
         const dateIdx = headers.findIndex((item) => item === 'date');
         const immatIdx = headers.findIndex((item) => item.includes('immat'));
@@ -310,25 +327,12 @@ export default function Home() {
         for (let i = 1; i < lines.length; i++) {
           const cols = parseCsvLine(lines[i]);
           const dateRaw = cols[dateIdx] || '';
-          const date = dateRaw.includes('/') ? dateRaw.split('/').reverse().join('-') : dateRaw;
-          rows.push({
-            date,
-            immatriculation: cols[immatIdx] || '',
-            code_sap: cols[sapIdx] || '',
-            manufacturer_ref: cols[manufacturerIdx] || '',
-            search_label: cols[searchLabelIdx] || '',
-            quantite: Number(cols[qteIdx] || 0),
-            description: cols[descIdx] || '',
-          });
+          rows.push({ date: dateRaw.includes('/') ? dateRaw.split('/').reverse().join('-') : dateRaw, immatriculation: cols[immatIdx] || '', code_sap: cols[sapIdx] || '', manufacturer_ref: cols[manufacturerIdx] || '', search_label: cols[searchLabelIdx] || '', quantite: Number(cols[qteIdx] || 0), description: cols[descIdx] || '' });
         }
-
         const result = await bulkImport(rows);
         void refreshAudit();
         void refreshDashboard();
         addToast('success', `📥 Import terminé : ${result.inserted} ajoutée(s), ${result.skipped} ignorée(s)`);
-        if (result.errors.length) {
-          addToast('info', `ℹ️ ${result.errors.slice(0, 3).map((item) => `L${item.row}: ${item.message}`).join(' · ')}`);
-        }
       } catch (error) {
         addToast('error', error instanceof Error ? error.message : 'Erreur import CSV');
       } finally {
@@ -338,19 +342,50 @@ export default function Home() {
     reader.readAsText(file, 'UTF-8');
   };
 
+  const handleOpenInversion = (sortie: Sortie) => {
+    setInversionSource(sortie);
+    setInversionForm(buildInversionPrefill(sortie));
+    setInversionErrors({});
+    setTab('inversions');
+  };
+
+  const handleInversionChange = (key: keyof InversionFormState, value: string) => {
+    setInversionForm((current) => ({ ...current, [key]: value }));
+    setInversionErrors((current) => ({ ...current, [key]: '', global: '' }));
+  };
+
+  const handleInversionTyreSearchChange = (value: string) => {
+    setInversionForm((current) => ({ ...current, billed_tyre_search: value, billed_tyre_catalog_id: '' }));
+  };
+
+  const handleInversionTyreSelect = (item: TyreCatalogItem) => {
+    setInversionForm((current) => ({ ...current, billed_tyre_search: getTyreSearchValue(item), billed_tyre_catalog_id: String(item.id), billed_code_sap: item.sap_code || '', billed_manufacturer_ref: item.manufacturer_ref || '', billed_search_label: item.search_label || '', billed_description: item.description || '' }));
+  };
+
+  const handleCreateInversion = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const created = await inversions.create(toInversionPayload(inversionForm));
+      setInversionSource(null);
+      setInversionForm(defaultInversionForm());
+      void refreshAudit();
+      addToast('success', `↔️ Inversion enregistrée : ${created.immatriculation} · ${created.quantite} pneus`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Erreur lors de la création de l’inversion';
+      setInversionErrors({ global: message });
+      addToast('error', message);
+    }
+  };
+
   return (
     <div className="mx-auto max-w-5xl px-4 py-6">
       <ToastViewport toasts={toasts} />
-
       <div className="-mx-4 -mt-6 mb-0 bg-gradient-to-b from-[#0d305c] to-white">
         <div className="mx-auto max-w-5xl px-4 pt-4 pb-0">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
             <div className="px-1 pb-4 text-white">
               <h1 className="text-2xl font-bold">Pneu Tracker</h1>
-              <p className="mt-1 text-sm text-white/70">
-                {total} sortie{total > 1 ? 's' : ''} · {totalPneus} pneus affichés
-                {lastSaved ? ` · dernière action ${formatDateTimeFr(lastSaved)}` : ''}
-              </p>
+              <p className="mt-1 text-sm text-white/70">{total} sortie{total > 1 ? 's' : ''} · {totalPneus} pneus affichés{lastSaved ? ` · dernière action ${formatDateTimeFr(lastSaved)}` : ''}</p>
             </div>
             <HeaderStats total={totalPneus} thisMonth={thisMonthQty} vehicles={uniqueImmats.length} />
           </div>
@@ -361,92 +396,52 @@ export default function Home() {
         <Tabs tab={tab} onChange={setTab} />
       </div>
 
-      {tab === 'form' ? (
-        <SortieForm
-          form={form}
-          errors={formErrors}
-          loading={saving}
-          onChange={handleFormChange}
-          onQuickQty={handleQuickQty}
-          onSubmit={handleSubmit}
-          onTyreSearchChange={handleTyreSearchChange}
-          onTyreSelect={(item) => applyTyreSelection('create', item)}
-          recentHint={recentHint}
-          lastSortie={lastSortie}
-          selectedTyre={selectedTyre}
-        />
-      ) : null}
+      {tab === 'form' && <SortieForm form={form} errors={formErrors} loading={saving} onChange={handleFormChange} onQuickQty={handleQuickQty} onSubmit={handleSubmit} onTyreSearchChange={handleTyreSearchChange} onTyreSelect={(item) => applyTyreSelection('create', item)} recentHint={recentHint} lastSortie={lastSortie} selectedTyre={selectedTyre} />}
 
-      {tab === 'history' ? (
+      {tab === 'history' && (
         <div className="flex flex-col gap-4">
           <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
             <div className="flex flex-col gap-3">
-              <FiltersBar
-                search={filters.search}
-                immatriculation={filters.immatriculation}
-                dateFrom={filters.dateFrom}
-                dateTo={filters.dateTo}
-                facture={(filters.facture as FactureFilter) || 'all'}
-                uniqueImmats={uniqueImmats}
-                nonFactureCount={filters.facture === 'all' ? items.filter((item) => !item.facture_at).length : 0}
-                onChange={(key, value) => setFilters((current) => ({ ...current, [key]: value, offset: 0 }))}
-                onReset={resetFilters}
-                onSearchSelect={(item) => setFilters((current) => ({ ...current, search: getTyreSearchValue(item), offset: 0 }))}
-              />
-
+              <FiltersBar search={filters.search} immatriculation={filters.immatriculation} dateFrom={filters.dateFrom} dateTo={filters.dateTo} facture={(filters.facture as FactureFilter) || 'all'} uniqueImmats={uniqueImmats} nonFactureCount={filters.facture === 'all' ? items.filter((item) => !item.facture_at).length : 0} onChange={(key, value) => setFilters((current) => ({ ...current, [key]: value, offset: 0 }))} onReset={resetFilters} onSearchSelect={(item) => setFilters((current) => ({ ...current, search: getTyreSearchValue(item), offset: 0 }))} />
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="text-sm text-gray-500">Recherche + filtres côté serveur, pagination 20 par page, audit trail actif.</span>
                 <div className="flex flex-wrap gap-2">
-                  <label className="cursor-pointer rounded-lg border border-indigo-300 bg-indigo-50 px-3 py-1.5 text-sm font-medium text-indigo-700 transition-colors hover:bg-indigo-100">
-                    {importing ? 'Import…' : '📥 Import CSV'}
-                    <input ref={fileInputRef} type="file" accept=".csv" onChange={handleImportCsv} className="hidden" />
-                  </label>
+                  <label className="cursor-pointer rounded-lg border border-indigo-300 bg-indigo-50 px-3 py-1.5 text-sm font-medium text-indigo-700 transition-colors hover:bg-indigo-100">{importing ? 'Import…' : '📥 Import CSV'}<input ref={fileInputRef} type="file" accept=".csv" onChange={handleImportCsv} className="hidden" /></label>
                   <button onClick={handleExportCsv} className="rounded-lg border border-green-300 bg-green-50 px-3 py-1.5 text-sm font-medium text-green-700 transition-colors hover:bg-green-100">⬇️ CSV (Excel)</button>
-                  <button
-                    onClick={() => {
-                      const params = new URLSearchParams();
-                      if (filters.search) params.set('search', filters.search);
-                      if (filters.immatriculation) params.set('immatriculation', filters.immatriculation);
-                      if (filters.dateFrom) params.set('dateFrom', filters.dateFrom);
-                      if (filters.dateTo) params.set('dateTo', filters.dateTo);
-                      if (filters.facture !== 'all') params.set('facture', filters.facture);
-                      window.open(`/api/sorties/export/pdf?${params.toString()}`, '_blank');
-                    }}
-                    className="rounded-lg border border-red-300 bg-red-50 px-3 py-1.5 text-sm font-medium text-red-700 transition-colors hover:bg-red-100"
-                  >
-                    📄 PDF
-                  </button>
+                  <button onClick={() => { const params = new URLSearchParams(); if (filters.search) params.set('search', filters.search); if (filters.immatriculation) params.set('immatriculation', filters.immatriculation); if (filters.dateFrom) params.set('dateFrom', filters.dateFrom); if (filters.dateTo) params.set('dateTo', filters.dateTo); if (filters.facture !== 'all') params.set('facture', filters.facture); window.open(`/api/sorties/export/pdf?${params.toString()}`, '_blank'); }} className="rounded-lg border border-red-300 bg-red-50 px-3 py-1.5 text-sm font-medium text-red-700 transition-colors hover:bg-red-100">📄 PDF</button>
                 </div>
               </div>
             </div>
           </div>
-
-          <SortiesList items={items} total={total} loading={loading} onEdit={openEdit} onDelete={setDeletingSortie} onToggleFacture={handleToggleFacture} />
+          <SortiesList items={items} total={total} loading={loading} onEdit={openEdit} onDelete={setDeletingSortie} onToggleFacture={handleToggleFacture} onCreateInversion={handleOpenInversion} />
           <PaginationControls pageStart={pageStart} pageEnd={pageEnd} total={total} hasPrev={hasPrev} hasNext={hasNext} onPrev={prevPage} onNext={nextPage} />
           <AuditLogPanel logs={auditLogs} />
         </div>
-      ) : null}
+      )}
 
-      {tab === 'dashboard' ? (
-        !dashboard || dashboard.summary.totalLines === 0 ? (
-          <div className="rounded-xl border border-gray-200 bg-white p-12 text-center text-gray-400">Aucune donnée à afficher</div>
-        ) : (
-          <DashboardCharts data={dashboard} period={period} onPeriodChange={handlePeriodChange} />
-        )
-      ) : null}
+      {tab === 'inversions' && (
+        <div className="flex flex-col gap-4">
+          <InversionForm form={inversionForm} errors={inversionErrors} loading={inversions.saving} sourceSortieLabel={inversionSource ? `${inversionSource.immatriculation} · ${formatDateFr(inversionSource.date)}` : null} onChange={handleInversionChange} onSubmit={handleCreateInversion} onBilledTyreSearchChange={handleInversionTyreSearchChange} onBilledTyreSelect={handleInversionTyreSelect} />
+          <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+            <div className="flex flex-col gap-3">
+              <FiltersBar search={inversions.filters.search} immatriculation={inversions.filters.immatriculation} dateFrom={inversions.filters.dateFrom} dateTo={inversions.filters.dateTo} facture={(inversions.filters.facture as FactureFilter) || 'all'} uniqueImmats={inversions.uniqueImmats} nonFactureCount={inversions.filters.facture === 'all' ? inversions.items.filter((item) => !item.facture_reference).length : 0} onChange={(key, value) => inversions.setFilters((current) => ({ ...current, [key]: value, offset: 0 }))} onReset={inversions.resetFilters} onSearchSelect={(item) => inversions.setFilters((current) => ({ ...current, search: getTyreSearchValue(item), offset: 0 }))} />
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-sm text-gray-500">Une inversion = même immatriculation et même quantité que la sortie source, mais référence facturée différente.</span>
+                <div className="flex flex-wrap gap-2">
+                  <button onClick={handleExportInversionsCsv} className="rounded-lg border border-green-300 bg-green-50 px-3 py-1.5 text-sm font-medium text-green-700 transition-colors hover:bg-green-100">⬇️ CSV (Excel)</button>
+                  <button onClick={() => { const params = new URLSearchParams(); if (inversions.filters.search) params.set('search', inversions.filters.search); if (inversions.filters.immatriculation) params.set('immatriculation', inversions.filters.immatriculation); if (inversions.filters.dateFrom) params.set('dateFrom', inversions.filters.dateFrom); if (inversions.filters.dateTo) params.set('dateTo', inversions.filters.dateTo); if (inversions.filters.facture !== 'all') params.set('facture', inversions.filters.facture); window.open(`/api/inversions/export/pdf?${params.toString()}`, '_blank'); }} className="rounded-lg border border-red-300 bg-red-50 px-3 py-1.5 text-sm font-medium text-red-700 transition-colors hover:bg-red-100">📄 PDF</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <InversionsList items={inversions.items} total={inversions.total} loading={inversions.loading} />
+          <PaginationControls pageStart={inversions.pageStart} pageEnd={inversions.pageEnd} total={inversions.total} hasPrev={inversions.hasPrev} hasNext={inversions.hasNext} onPrev={inversions.prevPage} onNext={inversions.nextPage} />
+        </div>
+      )}
 
-      <EditSortieDialog
-        open={Boolean(editing)}
-        form={editForm}
-        loading={saving}
-        error={undefined}
-        onChange={handleEditChange}
-        onTyreSearchChange={handleEditTyreSearchChange}
-        onTyreSelect={(item) => applyTyreSelection('edit', item)}
-        onClose={() => setEditing(null)}
-        onSubmit={handleEdit}
-      />
+      {tab === 'dashboard' && (!dashboard || dashboard.summary.totalLines === 0 ? <div className="rounded-xl border border-gray-200 bg-white p-12 text-center text-gray-400">Aucune donnée à afficher</div> : <DashboardCharts data={dashboard} period={period} onPeriodChange={handlePeriodChange} />)}
 
+      <EditSortieDialog open={Boolean(editing)} form={editForm} loading={saving} error={undefined} onChange={handleEditChange} onTyreSearchChange={handleEditTyreSearchChange} onTyreSelect={(item) => applyTyreSelection('edit', item)} onClose={() => setEditing(null)} onSubmit={handleEdit} />
       <DeleteDialog sortie={deletingSortie} loading={deleting} onConfirm={handleDelete} onClose={() => setDeletingSortie(null)} />
     </div>
   );

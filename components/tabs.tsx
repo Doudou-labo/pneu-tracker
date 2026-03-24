@@ -1,9 +1,10 @@
-type Tab = 'form' | 'history' | 'dashboard';
+type Tab = 'form' | 'history' | 'inversions' | 'dashboard';
 
 export function Tabs({ tab, onChange }: { tab: Tab; onChange: (tab: Tab) => void }) {
   const items: Array<[Tab, string]> = [
     ['form', '📝 Saisie'],
     ['history', '📋 Historique'],
+    ['inversions', '↔️ Inversions'],
     ['dashboard', '📊 Dashboard'],
   ];
 

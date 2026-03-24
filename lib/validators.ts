@@ -1,4 +1,4 @@
-import { SortieInput } from './types';
+import { InversionInput, SortieInput } from './types';
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const SAP_RE = /^[A-Za-z0-9\-_/ ]{0,32}$/;
@@ -18,10 +18,8 @@ export class ValidationError extends Error {
 
 export function normalizeImmatriculation(value: string) {
   const clean = value.trim().toUpperCase().replace(/[\s\-]+/g, '');
-  // Format plaque française standard: AA-000-AA
   const match = clean.match(/^([A-Z]{1,2})(\d{3})([A-Z]{1,2})$/);
   if (match) return `${match[1]}-${match[2]}-${match[3]}`;
-  // Format libre: normaliser les tirets uniquement
   return value.trim().toUpperCase().replace(/\s+/g, '-').replace(/-+/g, '-');
 }
 
@@ -52,6 +50,14 @@ export function validateId(value: unknown) {
   return id;
 }
 
+function validateOptionalSap(value: unknown) {
+  const code_sap = normalizeOptionalText(value, 32);
+  if (code_sap && !SAP_RE.test(code_sap)) {
+    throw new ValidationError('Code SAP invalide');
+  }
+  return code_sap;
+}
+
 export function validateSortieInput(payload: unknown): SortieInput {
   if (!payload || typeof payload !== 'object') {
     throw new ValidationError('Payload invalide');
@@ -69,11 +75,7 @@ export function validateSortieInput(payload: unknown): SortieInput {
     throw new ValidationError('La quantité doit être un entier entre 1 et 20');
   }
 
-  const code_sap = normalizeOptionalText(input.code_sap, 32);
-  if (code_sap && !SAP_RE.test(code_sap)) {
-    throw new ValidationError('Code SAP invalide');
-  }
-
+  const code_sap = validateOptionalSap(input.code_sap);
   const description = normalizeOptionalText(input.description, 240);
   const manufacturer_ref = normalizeOptionalText(input.manufacturer_ref, 64);
   const search_label = normalizeOptionalText(input.search_label, 120);
@@ -88,6 +90,66 @@ export function validateSortieInput(payload: unknown): SortieInput {
     quantite,
     description,
     tyre_catalog_id,
+  };
+}
+
+export function validateInversionInput(payload: unknown): InversionInput {
+  if (!payload || typeof payload !== 'object') {
+    throw new ValidationError('Payload invalide');
+  }
+
+  const input = payload as Record<string, unknown>;
+  const date = validateDate(input.date);
+  const sortie_id = validateId(input.sortie_id);
+  const immatriculation = normalizeImmatriculation(String(input.immatriculation ?? ''));
+  if (!immatriculation || !IMMAT_ALLOWED_RE.test(immatriculation)) {
+    throw new ValidationError('Immatriculation invalide');
+  }
+
+  const quantite = Number(input.quantite);
+  if (!Number.isInteger(quantite) || quantite <= 0 || quantite > 20) {
+    throw new ValidationError('La quantité doit être un entier entre 1 et 20');
+  }
+
+  const mounted_code_sap = validateOptionalSap(input.mounted_code_sap);
+  const mounted_manufacturer_ref = normalizeOptionalText(input.mounted_manufacturer_ref, 64);
+  const mounted_search_label = normalizeOptionalText(input.mounted_search_label, 120);
+  const mounted_description = normalizeOptionalText(input.mounted_description, 240);
+  const mounted_tyre_catalog_id = input.mounted_tyre_catalog_id == null || input.mounted_tyre_catalog_id === '' ? null : validateId(input.mounted_tyre_catalog_id);
+
+  const billed_code_sap = validateOptionalSap(input.billed_code_sap);
+  const billed_manufacturer_ref = normalizeOptionalText(input.billed_manufacturer_ref, 64);
+  const billed_search_label = normalizeOptionalText(input.billed_search_label, 120);
+  const billed_description = normalizeOptionalText(input.billed_description, 240);
+  const billed_tyre_catalog_id = input.billed_tyre_catalog_id == null || input.billed_tyre_catalog_id === '' ? null : validateId(input.billed_tyre_catalog_id);
+  const facture_reference = normalizeOptionalText(input.facture_reference, 120);
+
+  if (!billed_code_sap && !billed_manufacturer_ref && !billed_search_label && !billed_description) {
+    throw new ValidationError('La référence facturée est obligatoire');
+  }
+
+  const billedFingerprint = [billed_code_sap, billed_manufacturer_ref, billed_search_label, billed_description].map((value) => value || '').join('|');
+  const mountedFingerprint = [mounted_code_sap, mounted_manufacturer_ref, mounted_search_label, mounted_description].map((value) => value || '').join('|');
+  if (billedFingerprint === mountedFingerprint) {
+    throw new ValidationError('La référence facturée doit être différente de la référence montée');
+  }
+
+  return {
+    sortie_id,
+    date,
+    immatriculation,
+    quantite,
+    mounted_code_sap,
+    mounted_manufacturer_ref,
+    mounted_search_label,
+    mounted_description,
+    mounted_tyre_catalog_id,
+    billed_code_sap,
+    billed_manufacturer_ref,
+    billed_search_label,
+    billed_description,
+    billed_tyre_catalog_id,
+    facture_reference,
   };
 }
 

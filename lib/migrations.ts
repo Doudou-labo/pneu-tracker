@@ -126,6 +126,46 @@ const migrations: Migration[] = [
       CREATE INDEX IF NOT EXISTS idx_sorties_facture_at ON sorties(facture_at);
     `,
   },
+  {
+    version: 9,
+    description: 'Create inversions table',
+    sql: `
+      CREATE TABLE IF NOT EXISTS inversions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        sortie_id INTEGER NOT NULL,
+        date TEXT NOT NULL,
+        immatriculation TEXT NOT NULL,
+        quantite INTEGER NOT NULL,
+        mounted_code_sap TEXT,
+        mounted_manufacturer_ref TEXT,
+        mounted_search_label TEXT,
+        mounted_description TEXT,
+        mounted_tyre_catalog_id INTEGER,
+        billed_code_sap TEXT,
+        billed_manufacturer_ref TEXT,
+        billed_search_label TEXT,
+        billed_description TEXT,
+        billed_tyre_catalog_id INTEGER,
+        facture_reference TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+        FOREIGN KEY (sortie_id) REFERENCES sorties(id)
+      );
+      CREATE INDEX IF NOT EXISTS idx_inversions_sortie_id ON inversions(sortie_id);
+      CREATE INDEX IF NOT EXISTS idx_inversions_date_created ON inversions(date DESC, created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_inversions_immat_date ON inversions(immatriculation, date DESC);
+      CREATE INDEX IF NOT EXISTS idx_inversions_facture_reference ON inversions(facture_reference);
+    `,
+  },
+  {
+    version: 10,
+    description: 'Add soft delete and uniqueness to inversions',
+    sql: `
+      ALTER TABLE inversions ADD COLUMN deleted_at TEXT;
+      CREATE INDEX IF NOT EXISTS idx_inversions_deleted_at ON inversions(deleted_at);
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_inversions_unique_sortie_active ON inversions(sortie_id) WHERE deleted_at IS NULL;
+    `,
+  },
 ];
 
 export function runMigrations(db: Database.Database): void {
@@ -140,8 +180,6 @@ export function runMigrations(db: Database.Database): void {
     (db.prepare('SELECT version FROM schema_migrations').all() as Array<{ version: number }>).map((r) => r.version),
   );
 
-  // Migration from old system: if updated_at column exists (old inline migration),
-  // mark all historical migrations as applied
   const hasOldSchema = db.prepare("SELECT 1 FROM pragma_table_info('sorties') WHERE name = 'updated_at'").get();
   if (hasOldSchema && applied.size === 0) {
     const bootstrap = db.transaction(() => {
@@ -158,16 +196,13 @@ export function runMigrations(db: Database.Database): void {
 
   for (const migration of pending) {
     const run = db.transaction(() => {
-      // Wrap migration in try-catch to handle "duplicate column" errors gracefully
-      // This allows migrations to be idempotent
       try {
         db.exec(migration.sql);
       } catch (err: any) {
-        // If error is about duplicate column, log and continue (already exists)
         if (err.message?.includes('duplicate column name')) {
           console.warn(`Migration ${migration.version}: Column already exists, skipping: ${err.message}`);
         } else {
-          throw err; // Re-throw other errors
+          throw err;
         }
       }
       db.prepare('INSERT INTO schema_migrations (version, applied_at) VALUES (?, datetime(\'now\'))').run(migration.version);

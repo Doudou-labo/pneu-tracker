@@ -1,4 +1,4 @@
-import { DashboardPayload, FactureFilter, Sortie, SortiesQueryResult, SortieInput, TyreCatalogItem } from './types';
+import { DashboardPayload, FactureFilter, Inversion, InversionsQueryResult, InversionInput, Sortie, SortiesQueryResult, SortieInput, TyreCatalogItem } from './types';
 
 export type SortiesFilters = {
   search: string;
@@ -9,6 +9,8 @@ export type SortiesFilters = {
   offset: number;
   facture: FactureFilter;
 };
+
+export type InversionsFilters = SortiesFilters;
 
 async function request<T>(input: string, init?: RequestInit): Promise<T> {
   const response = await fetch(input, {
@@ -39,6 +41,11 @@ export function buildQuery(filters: Partial<SortiesFilters>) {
 export async function fetchSorties(filters: SortiesFilters) {
   const query = buildQuery(filters);
   return request<SortiesQueryResult>(`/api/sorties?${query}`);
+}
+
+export async function fetchInversions(filters: InversionsFilters) {
+  const query = buildQuery(filters);
+  return request<InversionsQueryResult>(`/api/inversions?${query}`);
 }
 
 export async function fetchAuditLogs(limit = 20) {
@@ -75,4 +82,8 @@ export async function importSorties(rows: SortieInput[]) {
     method: 'POST',
     body: JSON.stringify({ rows }),
   });
+}
+
+export async function createInversion(input: InversionInput) {
+  return request<Inversion>('/api/inversions', { method: 'POST', body: JSON.stringify(input) });
 }
