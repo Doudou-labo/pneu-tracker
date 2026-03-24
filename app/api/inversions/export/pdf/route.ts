@@ -7,8 +7,10 @@ interface InversionRow {
   date: string;
   immatriculation: string;
   quantite: number;
-  mounted_manufacturer_ref: string | null;
-  billed_manufacturer_ref: string | null;
+  mounted_code_sap: string | null;
+  mounted_description: string | null;
+  billed_code_sap: string | null;
+  billed_description: string | null;
   facture_reference: string | null;
 }
 
@@ -40,8 +42,8 @@ export async function GET(request: Request) {
     doc.fillColor('#ffffff').fontSize(20).text('Pneu Tracker — Export Inversions', 40, 18, { align: 'center' });
     doc.fontSize(10).text(`Export du ${new Date().toLocaleDateString('fr-FR')} · ${rows.length} inversion(s) · ${totalPneus} pneus`, 40, 42, { align: 'center' });
 
-    const headers = ['Date', 'Immatriculation', 'Monté', 'Facturé', 'Qté', 'Facture'];
-    const widths = [70, 110, 220, 220, 50, 90];
+    const headers = ['Date', 'Immatriculation', 'SAP monté', 'Description montée', 'SAP facturé', 'Description facturée', 'Qté', 'Facture'];
+    const widths = [60, 100, 85, 170, 85, 170, 40, 70];
     const headerHeight = 24;
     const rowHeight = 20;
     const tableX = 40;
@@ -51,7 +53,7 @@ export async function GET(request: Request) {
     doc.rect(tableX, y, widths.reduce((a, b) => a + b, 0), headerHeight).fill(BLUE);
     doc.fillColor('#fff').font('Helvetica-Bold').fontSize(9);
     headers.forEach((header, index) => {
-      doc.text(header, x + 4, y + 6, { width: widths[index] - 8, align: index >= 4 ? 'center' : 'left' });
+      doc.text(header, x + 4, y + 6, { width: widths[index] - 8, align: index >= 6 ? 'center' : 'left' });
       x += widths[index];
     });
 
@@ -71,8 +73,10 @@ export async function GET(request: Request) {
       const cells = [
         row.date.split('-').reverse().join('/'),
         row.immatriculation,
-        row.mounted_manufacturer_ref || '—',
-        row.billed_manufacturer_ref || '—',
+        row.mounted_code_sap || '—',
+        row.mounted_description || '—',
+        row.billed_code_sap || '—',
+        row.billed_description || '—',
         String(row.quantite),
         row.facture_reference || '—',
       ];
@@ -81,7 +85,7 @@ export async function GET(request: Request) {
       cells.forEach((cell, cellIndex) => {
         doc.text(cell, x + 4, y + 6, {
           width: widths[cellIndex] - 8,
-          align: cellIndex >= 4 ? 'center' : 'left',
+          align: cellIndex >= 6 ? 'center' : 'left',
           lineBreak: false,
         });
         x += widths[cellIndex];
