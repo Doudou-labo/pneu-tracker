@@ -18,7 +18,7 @@ export async function GET(request: Request) {
 
     const items = listInversionsForExport(filters);
     const csv = buildCsv([
-      ['Date', 'Immatriculation', 'Quantité', 'SAP monté', 'Réf montée', 'Libellé monté', 'SAP facturé', 'Réf facturée', 'Libellé facturé', 'Description facturée', 'Facture'],
+      ['Date', 'Immatriculation', 'Quantité', 'SAP monté', 'Réf montée', 'Libellé monté', 'SAP facturé', 'Réf facturée', 'Libellé facturé', 'Description facturée', 'Facture', 'Inversion faite'],
       ...items.map((item: any) => [
         item.date,
         item.immatriculation,
@@ -31,6 +31,7 @@ export async function GET(request: Request) {
         item.billed_search_label || '',
         item.billed_description || '',
         item.facture_reference || '',
+        item.done_at ? 'Oui' : 'Non',
       ]),
     ]);
 

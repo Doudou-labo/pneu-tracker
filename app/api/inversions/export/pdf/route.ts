@@ -12,6 +12,7 @@ interface InversionRow {
   billed_code_sap: string | null;
   billed_description: string | null;
   facture_reference: string | null;
+  done_at: string | null;
 }
 
 export async function GET(request: Request) {
@@ -42,8 +43,8 @@ export async function GET(request: Request) {
     doc.fillColor('#ffffff').fontSize(20).text('Pneu Tracker — Export Inversions', 40, 18, { align: 'center' });
     doc.fontSize(10).text(`Export du ${new Date().toLocaleDateString('fr-FR')} · ${rows.length} inversion(s) · ${totalPneus} pneus`, 40, 42, { align: 'center' });
 
-    const headers = ['Date', 'Immatriculation', 'SAP monté', 'Description montée', 'SAP facturé', 'Description facturée', 'Qté', 'Facture'];
-    const widths = [60, 100, 85, 170, 85, 170, 40, 70];
+    const headers = ['Date', 'Immatriculation', 'SAP monté', 'Description montée', 'SAP facturé', 'Description facturée', 'Qté', 'Facture', 'Statut'];
+    const widths = [55, 95, 80, 150, 80, 150, 35, 65, 55];
     const headerHeight = 24;
     const rowHeight = 20;
     const tableX = 40;
@@ -79,6 +80,7 @@ export async function GET(request: Request) {
         row.billed_description || '—',
         String(row.quantite),
         row.facture_reference || '—',
+        row.done_at ? 'Faite' : 'À faire',
       ];
 
       x = tableX;
