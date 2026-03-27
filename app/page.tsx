@@ -6,6 +6,7 @@ import { Tabs } from '@/components/tabs';
 import { SortieForm } from '@/components/sortie-form';
 import { FiltersBar } from '@/components/filters-bar';
 import { SortiesList } from '@/components/sorties-list';
+import { CatalogImportPanel } from '@/components/catalog-import-panel';
 import { DashboardCharts } from '@/components/dashboard-charts';
 import { EditSortieDialog } from '@/components/edit-sortie-dialog';
 import { DeleteDialog } from '@/components/delete-dialog';
@@ -19,6 +20,7 @@ import { useInversions } from '@/hooks/use-inversions';
 import { useToast } from '@/hooks/use-toast';
 import { useDashboard } from '@/hooks/use-dashboard';
 import { useAudit } from '@/hooks/use-audit';
+import { useTyreCatalog } from '@/hooks/use-tyre-catalog';
 import { buildCsv, parseCsvLine } from '@/lib/csv';
 import { formatDateFr, formatDateTimeFr } from '@/lib/formatters';
 import { FactureFilter, Inversion, Sortie, SortieInput, TyreCatalogItem } from '@/lib/types';
@@ -122,6 +124,7 @@ export default function Home() {
   const { toasts, toast: addToast } = useToast();
   const { dashboard, refreshDashboard, period, handlePeriodChange } = useDashboard();
   const { auditLogs, refreshAudit } = useAudit();
+  const { status: tyreCatalogStatus, loading: loadingTyreCatalog, importing: importingTyreCatalog, importFile: importTyreCatalogFile } = useTyreCatalog();
   const inversions = useInversions();
 
   const {
@@ -302,6 +305,20 @@ export default function Home() {
     addToast('info', '📤 Export CSV des inversions généré');
   };
 
+  const handleImportTyreCatalog = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const result = await importTyreCatalogFile(file);
+      addToast('success', `📦 Catalogue importé : ${result.inserted} ajoutée(s), ${result.updated} mise(s) à jour, ${result.ignored} ignorée(s)`);
+    } catch (error) {
+      addToast('error', error instanceof Error ? error.message : 'Erreur import catalogue');
+    } finally {
+      e.target.value = '';
+    }
+  };
+
   const handleImportCsv = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -437,6 +454,14 @@ export default function Home() {
 
       {tab === 'history' && (
         <div className="flex flex-col gap-4">
+          <CatalogImportPanel
+            totalCatalogReferences={tyreCatalogStatus?.totalCatalogReferences ?? 0}
+            lastImportedAt={tyreCatalogStatus?.lastImportedAt ?? null}
+            lastRun={tyreCatalogStatus?.lastRun ?? null}
+            loading={loadingTyreCatalog}
+            importing={importingTyreCatalog}
+            onSelectFile={handleImportTyreCatalog}
+          />
           <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
             <div className="flex flex-col gap-3">
               <FiltersBar search={filters.search} immatriculation={filters.immatriculation} dateFrom={filters.dateFrom} dateTo={filters.dateTo} facture={(filters.facture as FactureFilter) || 'all'} uniqueImmats={uniqueImmats} nonFactureCount={filters.facture === 'all' ? items.filter((item) => !item.facture_at).length : 0} onChange={(key, value) => setFilters((current) => ({ ...current, [key]: value, offset: 0 }))} onReset={resetFilters} onSearchSelect={(item) => setFilters((current) => ({ ...current, search: getTyreSearchValue(item), offset: 0 }))} />

@@ -74,6 +74,36 @@ export interface TyreCatalogItem {
   season: string | null;
 }
 
+export interface TyreCatalogImportRun {
+  id: number;
+  imported_at: string;
+  file_name: string | null;
+  file_type: string | null;
+  inserted_count: number;
+  updated_count: number;
+  ignored_count: number;
+  error_count: number;
+  total_rows: number;
+  status: string;
+}
+
+export interface TyreCatalogStatus {
+  totalCatalogReferences: number;
+  lastImportedAt: string | null;
+  lastRun: TyreCatalogImportRun | null;
+}
+
+export interface TyreCatalogImportResult {
+  ok: true;
+  inserted: number;
+  updated: number;
+  ignored: number;
+  errors: Array<{ row: number; message: string }>;
+  totalRows: number;
+  totalCatalogReferences: number;
+  lastImportedAt: string | null;
+}
+
 export interface DashboardPayload {
   summary: { totalLines: number; totalQuantity: number; distinctRefs: number; topBrand: string };
   topBrands: Array<{ label: string; lines: number; quantity: number }>;

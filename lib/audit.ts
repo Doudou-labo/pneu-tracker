@@ -1,6 +1,6 @@
 import db from './db';
 
-export type AuditAction = 'create' | 'update' | 'delete' | 'import_csv' | 'export_csv' | 'export_pdf';
+export type AuditAction = 'create' | 'update' | 'delete' | 'import_csv' | 'import_catalog' | 'export_csv' | 'export_pdf';
 
 export function getActor(request: Request) {
   const auth = request.headers.get('authorization');

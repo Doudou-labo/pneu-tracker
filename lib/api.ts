@@ -1,4 +1,4 @@
-import { DashboardPayload, FactureFilter, Inversion, InversionsQueryResult, InversionInput, Sortie, SortiesQueryResult, SortieInput, TyreCatalogItem } from './types';
+import { DashboardPayload, FactureFilter, Inversion, InversionsQueryResult, InversionInput, Sortie, SortiesQueryResult, SortieInput, TyreCatalogImportResult, TyreCatalogItem, TyreCatalogStatus } from './types';
 
 export type SortiesFilters = {
   search: string;
@@ -13,10 +13,11 @@ export type SortiesFilters = {
 export type InversionsFilters = SortiesFilters;
 
 async function request<T>(input: string, init?: RequestInit): Promise<T> {
+  const isFormData = typeof FormData !== 'undefined' && init?.body instanceof FormData;
   const response = await fetch(input, {
     ...init,
     headers: {
-      'Content-Type': 'application/json',
+      ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
       ...(init?.headers || {}),
     },
   });
@@ -54,6 +55,19 @@ export async function fetchAuditLogs(limit = 20) {
 
 export async function fetchTyreSuggestions(q: string, limit = 8) {
   return request<{ items: TyreCatalogItem[] }>(`/api/tyres/suggest?q=${encodeURIComponent(q)}&limit=${limit}`);
+}
+
+export async function fetchTyreCatalogStatus() {
+  return request<TyreCatalogStatus>('/api/tyres/catalog');
+}
+
+export async function importTyreCatalog(file: File) {
+  const formData = new FormData();
+  formData.append('file', file);
+  return request<TyreCatalogImportResult>('/api/tyres/catalog/import', {
+    method: 'POST',
+    body: formData,
+  });
 }
 
 export async function fetchDashboard(period?: string) {

@@ -174,6 +174,26 @@ const migrations: Migration[] = [
       CREATE INDEX IF NOT EXISTS idx_inversions_done_at ON inversions(done_at);
     `,
   },
+  {
+    version: 12,
+    description: 'Create tyre_catalog_import_runs table',
+    sql: `
+      CREATE TABLE IF NOT EXISTS tyre_catalog_import_runs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        file_name TEXT,
+        file_type TEXT,
+        total_rows INTEGER NOT NULL DEFAULT 0,
+        inserted_count INTEGER NOT NULL DEFAULT 0,
+        updated_count INTEGER NOT NULL DEFAULT 0,
+        ignored_count INTEGER NOT NULL DEFAULT 0,
+        error_count INTEGER NOT NULL DEFAULT 0,
+        report_json TEXT,
+        status TEXT NOT NULL DEFAULT 'success',
+        imported_at TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_tyre_catalog_import_runs_imported_at ON tyre_catalog_import_runs(imported_at DESC);
+    `,
+  },
 ];
 
 export function runMigrations(db: Database.Database): void {
