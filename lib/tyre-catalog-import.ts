@@ -110,8 +110,8 @@ function finalizeRows(fileName: string, fileType: 'csv' | 'xlsx', records: Array
     throw new ValidationError('Aucune ligne exploitable trouvée dans le fichier catalogue');
   }
 
-  if (rows.length > 10000) {
-    throw new ValidationError('Import limité à 10 000 lignes');
+  if (rows.length > 20000) {
+    throw new ValidationError('Import limité à 20 000 lignes');
   }
 
   return { fileName, fileType, rows };
