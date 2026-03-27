@@ -454,14 +454,6 @@ export default function Home() {
 
       {tab === 'history' && (
         <div className="flex flex-col gap-4">
-          <CatalogImportPanel
-            totalCatalogReferences={tyreCatalogStatus?.totalCatalogReferences ?? 0}
-            lastImportedAt={tyreCatalogStatus?.lastImportedAt ?? null}
-            lastRun={tyreCatalogStatus?.lastRun ?? null}
-            loading={loadingTyreCatalog}
-            importing={importingTyreCatalog}
-            onSelectFile={handleImportTyreCatalog}
-          />
           <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
             <div className="flex flex-col gap-3">
               <FiltersBar search={filters.search} immatriculation={filters.immatriculation} dateFrom={filters.dateFrom} dateTo={filters.dateTo} facture={(filters.facture as FactureFilter) || 'all'} uniqueImmats={uniqueImmats} nonFactureCount={filters.facture === 'all' ? items.filter((item) => !item.facture_at).length : 0} onChange={(key, value) => setFilters((current) => ({ ...current, [key]: value, offset: 0 }))} onReset={resetFilters} onSearchSelect={(item) => setFilters((current) => ({ ...current, search: getTyreSearchValue(item), offset: 0 }))} />
@@ -501,7 +493,19 @@ export default function Home() {
         </div>
       )}
 
-      {tab === 'dashboard' && (!dashboard || dashboard.summary.totalLines === 0 ? <div className="rounded-xl border border-gray-200 bg-white p-12 text-center text-gray-400">Aucune donnée à afficher</div> : <DashboardCharts data={dashboard} period={period} onPeriodChange={handlePeriodChange} />)}
+      {tab === 'dashboard' && (
+        <div className="flex flex-col gap-4">
+          <CatalogImportPanel
+            totalCatalogReferences={tyreCatalogStatus?.totalCatalogReferences ?? 0}
+            lastImportedAt={tyreCatalogStatus?.lastImportedAt ?? null}
+            lastRun={tyreCatalogStatus?.lastRun ?? null}
+            loading={loadingTyreCatalog}
+            importing={importingTyreCatalog}
+            onSelectFile={handleImportTyreCatalog}
+          />
+          {!dashboard || dashboard.summary.totalLines === 0 ? <div className="rounded-xl border border-gray-200 bg-white p-12 text-center text-gray-400">Aucune donnée à afficher</div> : <DashboardCharts data={dashboard} period={period} onPeriodChange={handlePeriodChange} />}
+        </div>
+      )}
 
       <EditSortieDialog open={Boolean(editing)} form={editForm} loading={saving} error={undefined} onChange={handleEditChange} onTyreSearchChange={handleEditTyreSearchChange} onTyreSelect={(item) => applyTyreSelection('edit', item)} onClose={() => setEditing(null)} onSubmit={handleEdit} />
       <DeleteDialog sortie={deletingSortie} loading={deleting} onConfirm={handleDelete} onClose={() => setDeletingSortie(null)} />
