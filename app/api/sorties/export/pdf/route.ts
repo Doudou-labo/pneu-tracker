@@ -1,26 +1,22 @@
+import PDFDocument from 'pdfkit';
 import { NextResponse } from 'next/server';
 import db from '@/lib/db';
-import PDFDocument from 'pdfkit';
+import { errorResponse } from '@/lib/validators';
 
-function escapeLike(s: string) {
-  return s.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
+function hasEnoughMeaningfulChars(term: string) {
+  return term.replace(/\*/g, '').trim().length >= 2;
 }
+
+function escapeLike(term: string) {
+  return term.replace(/[\\%_]/g, '\\$&');
+}
+
 function toSearchPattern(term: string) {
   const normalized = term.trim().replace(/\*+/g, '*');
   if (normalized.includes('*')) {
     return escapeLike(normalized).replace(/\*/g, '%');
   }
   return `%${normalized}%`;
-}
-
-interface Sortie {
-  id: number;
-  date: string;
-  immatriculation: string;
-  code_sap: string | null;
-  description: string | null;
-  quantite: number;
-  facture_at: string | null;
 }
 
 export async function GET(request: Request) {
@@ -35,145 +31,126 @@ export async function GET(request: Request) {
     const conditions = ['deleted_at IS NULL'];
     const params: unknown[] = [];
 
-    if (factureFilter === 'facture') conditions.push('facture_at IS NOT NULL');
-    else if (factureFilter === 'non_facture') conditions.push('facture_at IS NULL');
+    if (factureFilter === 'facture') {
+      conditions.push('facture_at IS NOT NULL');
+    } else if (factureFilter === 'non_facture') {
+      conditions.push('facture_at IS NULL');
+    }
 
-    if (search) {
-      const esc = '\\';
-      conditions.push(`(immatriculation LIKE ? ESCAPE '${esc}' OR COALESCE(code_sap,'') LIKE ? ESCAPE '${esc}' OR COALESCE(description,'') LIKE ? ESCAPE '${esc}')`);
+    if (search && (!search.includes('*') || hasEnoughMeaningfulChars(search))) {
+      conditions.push("(immatriculation LIKE ? ESCAPE '\\' OR COALESCE(code_sap,'') LIKE ? ESCAPE '\\' OR COALESCE(manufacturer_ref,'') LIKE ? ESCAPE '\\' OR COALESCE(search_label,'') LIKE ? ESCAPE '\\' OR COALESCE(description,'') LIKE ? ESCAPE '\\')");
       const like = toSearchPattern(search);
-      params.push(like, like, like);
+      params.push(like, like, like, like, like);
     }
 
     if (immatriculation) {
-      conditions.push('immatriculation LIKE ?');
-      params.push(`%${immatriculation}%`);
+      conditions.push('immatriculation = ?');
+      params.push(immatriculation);
     }
 
-    if (dateFrom) { conditions.push('date >= ?'); params.push(dateFrom); }
-    if (dateTo) { conditions.push('date <= ?'); params.push(dateTo); }
+    if (dateFrom) {
+      conditions.push('date >= ?');
+      params.push(dateFrom);
+    }
 
-    const sorties = db.prepare(`
-      SELECT id, date, immatriculation, code_sap, description, quantite, facture_at
-      FROM sorties
-      WHERE ${conditions.join(' AND ')}
-      ORDER BY date DESC, created_at DESC
-    `).all(...params) as Sortie[];
+    if (dateTo) {
+      conditions.push('date <= ?');
+      params.push(dateTo);
+    }
 
-    const totalPneus = sorties.reduce((sum, s) => sum + (s.quantite || 0), 0);
-    const dateExport = new Date().toLocaleDateString('fr-FR');
+    const where = `WHERE ${conditions.join(' AND ')}`;
+    const sorties = db
+      .prepare(`SELECT * FROM sorties ${where} ORDER BY date DESC, created_at DESC`)
+      .all(...params) as Record<string, unknown>[];
 
-    // Build PDF
-    const doc = new PDFDocument({ size: 'A4', layout: 'landscape', margin: 40 });
+    const doc = new PDFDocument({ margin: 40, size: 'A4' });
     const chunks: Buffer[] = [];
-
     doc.on('data', (chunk: Buffer) => chunks.push(chunk));
 
-    const pdfReady = new Promise<Buffer>((resolve, reject) => {
-      doc.on('end', () => resolve(Buffer.concat(chunks)));
-      doc.on('error', reject);
-    });
-
     // Header
-    const BLUE = '#144390';
-    doc.rect(0, 0, doc.page.width, 60).fill(BLUE);
-    doc.fillColor('#ffffff').fontSize(20).text('Pneu Tracker — Export Sorties', 40, 18, { align: 'center' });
-    doc.fontSize(10).text(`Export du ${dateExport}  ·  ${sorties.length} sortie(s)  ·  ${totalPneus} pneus`, 40, 42, { align: 'center' });
+    doc.fontSize(18).fillColor('#144390').text('Pneu Tracker — Export Sorties', { align: 'center' });
+    doc
+      .fontSize(10)
+      .fillColor('#666')
+      .text(`Export du ${new Date().toLocaleDateString('fr-FR')} · ${sorties.length} sortie(s)`, { align: 'center' });
+    doc.moveDown();
 
-    // Table setup
-    const startY = 80;
-    const colWidths = [70, 100, 80, 260, 45, 55]; // Date, Immat, SAP, Desc, Qté, Facturé
-    const headers = ['Date', 'Immatriculation', 'Code SAP', 'Description', 'Qté', 'Facturé'];
-    const tableX = 40;
-    const rowHeight = 20;
-    const headerHeight = 24;
+    // Separator
+    doc.moveTo(40, doc.y).lineTo(555, doc.y).strokeColor('#144390').stroke();
+    doc.moveDown(0.5);
 
-    // Draw header row
-    let x = tableX;
-    doc.rect(tableX, startY, colWidths.reduce((a, b) => a + b, 0), headerHeight).fill(BLUE);
-    doc.fillColor('#ffffff').fontSize(9).font('Helvetica-Bold');
-    for (let i = 0; i < headers.length; i++) {
-      const align = i >= 4 ? 'center' : 'left';
-      doc.text(headers[i], x + 4, startY + 6, { width: colWidths[i] - 8, align });
-      x += colWidths[i];
-    }
+    // Column layout
+    const colX = [40, 110, 185, 265, 410, 490];
+    const colW = [65, 70, 75, 140, 75, 65];
+    const headers = ['Date', 'Immat.', 'Code SAP', 'Description', 'Qté', 'Facturé'];
 
-    // Draw rows
-    let y = startY + headerHeight;
-    doc.font('Helvetica').fontSize(8);
+    const drawHeaders = (y: number) => {
+      doc.fontSize(8).fillColor('#144390').font('Helvetica-Bold');
+      headers.forEach((h, i) => {
+        doc.text(h, colX[i], y, { width: colW[i] });
+      });
+      const lineY = y + doc.currentLineHeight() + 2;
+      doc.moveTo(40, lineY).lineTo(555, lineY).strokeColor('#ccc').lineWidth(0.5).stroke();
+      return lineY + 4;
+    };
 
-    for (let idx = 0; idx < sorties.length; idx++) {
-      // New page check
-      if (y + rowHeight > doc.page.height - 50) {
+    let y = drawHeaders(doc.y);
+
+    for (const s of sorties) {
+      // Page break check
+      if (y > 750) {
         doc.addPage();
         y = 40;
-        // Redraw header on new page
-        x = tableX;
-        doc.rect(tableX, y, colWidths.reduce((a, b) => a + b, 0), headerHeight).fill(BLUE);
-        doc.fillColor('#ffffff').fontSize(9).font('Helvetica-Bold');
-        for (let i = 0; i < headers.length; i++) {
-          const align = i >= 4 ? 'center' : 'left';
-          doc.text(headers[i], x + 4, y + 6, { width: colWidths[i] - 8, align });
-          x += colWidths[i];
-        }
-        doc.font('Helvetica').fontSize(8);
-        y += headerHeight;
+        y = drawHeaders(y);
       }
 
-      const s = sorties[idx];
-      const bg = idx % 2 === 0 ? '#F0F4FA' : '#ffffff';
-      const tableWidth = colWidths.reduce((a, b) => a + b, 0);
-
-      // Row background
-      doc.rect(tableX, y, tableWidth, rowHeight).fill(bg);
-
-      // Row border
-      doc.rect(tableX, y, tableWidth, rowHeight).strokeColor('#e5e7eb').lineWidth(0.5).stroke();
-
-      doc.fillColor('#333333');
-
-      const date = s.date ? s.date.split('-').reverse().join('/') : '—';
-      const desc = s.description ? s.description.slice(0, 50) : '—';
-      const cells = [
-        date,
-        s.immatriculation || '—',
-        s.code_sap || '—',
-        desc,
-        String(s.quantite),
-        s.facture_at ? '✓' : '—',
+      const row = [
+        String(s.date || ''),
+        String(s.immatriculation || ''),
+        String(s.code_sap || ''),
+        String(s.description || ''),
+        String(s.quantite ?? ''),
+        s.facture_at ? '✓' : '',
       ];
 
-      x = tableX;
-      for (let i = 0; i < cells.length; i++) {
-        const align = i >= 4 ? 'center' : 'left';
-        const fontStyle = i === 1 ? 'Helvetica-Bold' : 'Helvetica';
-        doc.font(fontStyle).text(cells[i], x + 4, y + 6, { width: colWidths[i] - 8, align, lineBreak: false });
-        x += colWidths[i];
+      doc.fontSize(7.5).fillColor('#333').font('Helvetica');
+      let maxH = 0;
+      for (let i = 0; i < row.length; i++) {
+        const h = doc.heightOfString(row[i], { width: colW[i] });
+        if (h > maxH) maxH = h;
       }
 
-      y += rowHeight;
+      for (let i = 0; i < row.length; i++) {
+        doc.text(row[i], colX[i], y, { width: colW[i] });
+      }
+      y += maxH + 4;
+
+      // Light row separator
+      doc.moveTo(40, y - 1).lineTo(555, y - 1).strokeColor('#eee').lineWidth(0.3).stroke();
     }
 
     // Footer
-    y += 10;
-    doc.font('Helvetica-Bold').fontSize(10).fillColor(BLUE);
-    doc.text(`Total : ${sorties.length} sortie(s)  ·  ${totalPneus} pneus`, tableX, y, {
-      align: 'right',
-      width: colWidths.reduce((a, b) => a + b, 0),
+    doc.moveDown(2);
+    doc
+      .fontSize(8)
+      .fillColor('#999')
+      .font('Helvetica-Oblique')
+      .text('Document généré automatiquement par Pneu Tracker', { align: 'center' });
+
+    const pdfEnd = new Promise<Buffer>((resolve) => {
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+      doc.end();
     });
 
-    doc.end();
+    const buffer = await pdfEnd;
 
-    const pdfBuffer = await pdfReady;
-
-    return new NextResponse(pdfBuffer as BodyInit, {
+    return new NextResponse(buffer, {
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': 'attachment; filename="sorties-pneus.pdf"',
+        'Content-Disposition': `attachment; filename="sorties-pneus-${new Date().toISOString().split('T')[0]}.pdf"`,
       },
     });
-  } catch (err) {
-    console.error(err);
-    return NextResponse.json({ error: 'Erreur génération PDF' }, { status: 500 });
+  } catch (error) {
+    return errorResponse(error);
   }
 }
